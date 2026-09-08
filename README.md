@@ -48,5 +48,3 @@ One of the calculations the system replaces from the E6-B and paper performance 
 5. **User-facing interface** — build a simple UI for entering a route and viewing the full flight plan output.
 6. **Practice/learning mode** — add a mode that walks a user through the planning process step-by-step rather than just showing final results.
 7. **Review & polish** — incorporate feedback from our mentor, refine documentation and test coverage.
-
-```
