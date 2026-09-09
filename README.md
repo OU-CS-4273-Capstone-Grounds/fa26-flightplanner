@@ -31,7 +31,7 @@ The software is intended to support the pilot's decision-making process rather t
 | Technology | Purpose |
 |---|---|
 | **Python** | Primary programming language for implementing mathematical and data-processing logic for calculations involving flight time, fuel consumption, climb and descent performance, waypoint calculations, aircraft performance information, and weather information|
-| **Aviationweather.gov / SkyVector.com APIs** | Live aviation weather data  [METAR](https://aviationweather.gov/api/data/metar) and [TAF](https://aviationweather.gov/api/data/taf) endpoints feed real wind, visibility, and forecast data into the planning calculations |
+| **AviationWeather.gov / SkyVector.com APIs** | Live aviation weather data  [METAR](https://aviationweather.gov/api/data/metar) and [TAF](https://aviationweather.gov/api/data/taf) endpoints feed real wind, visibility, and forecast data into the planning calculations |
 | **Docker** | Containerizes the application for a consistent development and deployment environment across all team members |
 | **GitHub Actions** | CI/CD pipeline to runs automated unit tests and checks on every push/PR to catch issues early |
 | **Jira** | Project planning and task organization to track team progress |
