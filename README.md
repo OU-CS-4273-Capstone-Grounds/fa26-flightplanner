@@ -1,7 +1,10 @@
 # Cross-Country Flight Planner
-### CS 4273 Capstone Design Project - Fall 2026
-**Group:** D
-***Version:*** This document is updated to the latest date (09/08/2026) to reflect Group D's understanding of the domain, current project scope, identified technologies and tools, key project feature, unit-test examples, goals, and planned development progress for Ticket 2 Artifact.
+### CS 4273 Capstone Design Project (Fall 2026) - Group D
+
+**Last Updated:** September 8, 2026  
+
+**Ticket:** 2 — Technology Identification
+> Reflects the team's current project scope, technology decisions, key feature and unit-test examples, goals, and development plan.
 
 ## Team Members
 - Reese Zimmermann — Product Owner
