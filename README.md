@@ -59,6 +59,66 @@ One of the calculations the system replaces from the E6-B and paper performance 
 
 **Why this feature matters:** Nearly every aircraft performance figure (climb rate, takeoff roll, landing distance, range) is only accurate once corrected for density altitude. Getting this calculation right is important for the rest of the performance-planning features build on.
 
+---
+## Unit Test Examples
+
+The following unit tests represent the **Density Altitude Calculation** feature using the same inputs and expected output in Python, JavaScript, and Java.
+
+### Python
+
+```python
+import pytest
+from performance import calculate_density_altitude  # not implemented yet
+
+def test_calculate_density_altitude_basic():
+    result = calculate_density_altitude(
+        pressure_altitude=2500,
+        oat_celsius=25
+    )
+
+    assert result == pytest.approx(4300, abs=1)
+```
+
+### JavaScript
+
+```javascript
+import { calculateDensityAltitude } from '../performance';
+
+test('calculateDensityAltitude returns correct density altitude', () => {
+  const result = calculateDensityAltitude(2500, 25);
+
+  expect(result).toBeCloseTo(4300, 0);
+});
+```
+
+### Java
+
+```java
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+class PerformanceTest {
+
+    @Test
+    void calculateDensityAltitude_returnsExpectedValue() {
+        double result = Performance.calculateDensityAltitude(2500, 25);
+
+        assertEquals(4300, result, 1);
+    }
+}
+```
+
+### Test Scenario
+
+- **Pressure Altitude:** 2,500 ft
+- **Outside Air Temperature:** 25°C
+- **Expected Density Altitude:** approximately 4,300 ft
+
+All three tests evaluate the same Density Altitude Calculation feature using the same inputs and expected result. The calculation function has not yet been implemented; these tests define the expected behavior for future development.
+
+---
+
+
 ## Goals & Progress Plan
 
 **Overall goal:** Deliver a working flight-planning tool by the end of the semester that a pilot or student could realistically use to plan a cross-country flight, with wind, fuel, distance, and waypoint calculations pulling from live aviation weather data.
