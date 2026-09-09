@@ -1,8 +1,16 @@
-# Cross-Country Flight Planning System
+# Cross-Country Flight Planner
+**Group:** D
+## Team Members
+- Reese Zimmermann — Product Owner
+- Avinash Kandadi — Sprint Master 1
+- Sahith Gondi — Sprint Master 2
+- Sean Ropp — Sprint Master 3
+- Elise Alvarado — Sprint Master 4
+- Nic Grounds — Mentor / Client
 
 ## Project Description
 
-This project is a software system that assists pilots with cross-country flight planning. It replaces the traditional pen-and-paper process and the E6-B flight computer by calculating and displaying key flight-planning information — including wind effects (wind correction angle and ground speed), fuel/gas usage, distance, and waypoints along a flight path.
+The Flight Planner project is a software-based system that assists pilots with cross-country flight planning. It replaces the traditional pen-and-paper process and the E6-B flight computer by calculating and displaying key flight-planning information — including wind effects (wind correction angle and ground speed), fuel/gas usage, distance, and waypoints along a flight path.
 
 Beyond serving as a planning tool, the system is designed to double as a **learning and practice tool**, helping students and new pilots understand and work through the flight-planning process step by step, rather than simply producing a final number.
 
