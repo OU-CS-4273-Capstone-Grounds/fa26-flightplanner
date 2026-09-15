@@ -93,3 +93,31 @@ def calculate_landing_distance(temperature, field_elevation, altimeter_setting, 
         slope = 40
         return (density_altitude/slope) + (y_intercept/slope)
     return "No option selected"
+
+def calculate_takeoff_distance(temperature, field_elevation, altimeter_setting, ground_run, over_50_feet_obstacle):
+    """
+    Calculate the takeoff distance based on the density altitude and the type of takeoff.
+
+    Parameters:
+    temperature (float): The outside air temperature in degrees Celsius.
+    field_elevation (float): The elevation of the airfield in feet.
+    altimeter_setting (float): The current altimeter setting in inches of mercury (inHg).
+    ground_run (bool): Whether to calculate the ground roll distance.
+    over_50_feet_obstacle (bool): Whether to calculate the distance to clear a 50-feet obstacle.
+
+    Returns:
+    float or str: The calculated takeoff distance in feet, or an error message if both or neither options are selected.
+    """
+
+    density_altitude = calculate_density_altitude(temperature, field_elevation, altimeter_setting)
+    if ground_run and over_50_feet_obstacle:
+        return "Cannot have both enabled"
+    if ground_run:
+        slope = 14
+        y_intercept = 11000
+        return (density_altitude/slope) + (y_intercept/slope)
+    if over_50_feet_obstacle:
+        slope = 6
+        y_intercept = 10000
+        return (density_altitude/slope) + (y_intercept/slope)
+    return "No option selected"
