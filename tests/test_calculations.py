@@ -134,6 +134,15 @@ class TestCalculations(unittest.TestCase):
             expected,
             places=2,
         )
+    def test_calculate_true_air_speed_power_setting_out_of_range(self):
+        temperature = 15
+        field_elevation = 0
+        altimeter_setting = 29.92
+        power_setting = 45
+        self.assertEqual(
+            calculate_true_air_speed(temperature, field_elevation, altimeter_setting, power_setting),
+            "Power setting out of range (50-75)",
+        )
  
 if __name__ == "__main__":
     unittest.main()

@@ -59,7 +59,9 @@ def calculate_true_air_speed(temperature, field_elevation, altimeter_setting, po
     Returns:
     float: The calculated true air speed in miles per hour (mph).
     """
-
+    if power_setting < 50 or power_setting > 75:
+        return "Power setting out of range (50-75)"
+    
     density_altitude = calculate_density_altitude(temperature, field_elevation, altimeter_setting)
     y_intercept = 45.653
     mph_per_density_altitude = 0.0008722
