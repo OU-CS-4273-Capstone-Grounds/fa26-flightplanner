@@ -44,65 +44,93 @@ class TestCalculations(unittest.TestCase):
         )
  
     def test_calculate_takeoff_distance_ground_run(self):
+        temperature = 15
+        field_elevation = 0
+        altimeter_setting = 29.92
         expected = 785.71
         self.assertAlmostEqual(
-            calculate_takeoff_distance(15, 0, 29.92, True, False),
+            calculate_takeoff_distance(temperature, field_elevation, altimeter_setting, True, False),
             expected,
             places=2,
         )
  
     def test_calculate_takeoff_distance_over_50_feet_obstacle(self):
+        temperature = 15
+        field_elevation = 0
+        altimeter_setting = 29.92
         expected = 1666.67
         self.assertAlmostEqual(
-            calculate_takeoff_distance(15, 0, 29.92, False, True),
+            calculate_takeoff_distance(temperature, field_elevation, altimeter_setting, False, True),
             expected,
             places=2,
         )
  
     def test_calculate_takeoff_distance_both_enabled(self):
+        temperature = 15
+        field_elevation = 0
+        altimeter_setting = 29.92
         self.assertEqual(
-            calculate_takeoff_distance(15, 0, 29.92, True, True),
+            calculate_takeoff_distance(temperature, field_elevation, altimeter_setting, True, True),
             "Cannot have both enabled",
         )
  
     def test_calculate_takeoff_distance_neither_enabled(self):
+        temperature = 15
+        field_elevation = 0
+        altimeter_setting = 29.92
         self.assertEqual(
-            calculate_takeoff_distance(15, 0, 29.92, False, False),
+            calculate_takeoff_distance(temperature, field_elevation, altimeter_setting, False, False),
             "No option selected",
         )
  
     def test_calculate_landing_distance_ground_roll(self):
+        temperature = 15
+        field_elevation = 0
+        altimeter_setting = 29.92
         expected = 535.71
         self.assertAlmostEqual(
-            calculate_landing_distance(15, 0, 29.92, True, False),
+            calculate_landing_distance(temperature, field_elevation, altimeter_setting, True, False),
             expected,
             places=2,
         )
  
     def test_calculate_landing_distance_over_50_feet_obstacle(self):
+        temperature = 15
+        field_elevation = 0
+        altimeter_setting = 29.92
         expected = 1075.0
         self.assertAlmostEqual(
-            calculate_landing_distance(15, 0, 29.92, False, True),
+            calculate_landing_distance(temperature, field_elevation, altimeter_setting, False, True),
             expected,
             places=2,
         )
  
     def test_calculate_landing_distance_both_enabled(self):
+        temperature = 15
+        field_elevation = 0
+        altimeter_setting = 29.92
         self.assertEqual(
-            calculate_landing_distance(15, 0, 29.92, True, True),
+            calculate_landing_distance(temperature, field_elevation, altimeter_setting, True, True),
             "Cannot have both enabled",
         )
  
     def test_calculate_landing_distance_neither_enabled(self):
+        temperature = 15
+        field_elevation = 0
+        altimeter_setting = 29.92
         self.assertEqual(
-            calculate_landing_distance(15, 0, 29.92, False, False),
+            calculate_landing_distance(temperature, field_elevation, altimeter_setting, False, False),
             "No option selected",
         )
  
     def test_calculate_true_air_speed(self):
+        temperature = 15
+        field_elevation = 0
+        altimeter_setting = 29.92
+        power_setting = 75
         expected = 123.88
         self.assertAlmostEqual(
-            calculate_true_air_speed(15, 0, 29.92, 75),
+            calculate_true_air_speed(temperature, field_elevation, altimeter_setting, power_setting),
             expected,
             places=2,
         )
