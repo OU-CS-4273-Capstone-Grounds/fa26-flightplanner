@@ -2,7 +2,10 @@ import pytest
 
 from src import weather
 
+# Sample API responses. These mimic the JSON that AviationWeather.gov
+# returns, so the tests never have to make a real network request.
 
+# Current weather (METAR) for JFK.
 METAR_KJFK = {
     "icaoId": "KJFK",
     "name": "New York/JF Kennedy Intl, NY, US",
@@ -19,6 +22,7 @@ METAR_KJFK = {
     "clouds": [{"cover": "BKN", "base": 4300}],
 }
 
+# Current weather (METAR) for LAX, used to test multiple airports.
 METAR_KLAX = {
     "icaoId": "KLAX",
     "name": "Los Angeles Intl, CA, US",
@@ -35,6 +39,7 @@ METAR_KLAX = {
     "clouds": [{"cover": "FEW", "base": 1500}],
 }
 
+# Forecast (TAF) for JFK with a single forecast period.
 TAF_KJFK = {
     "icaoId": "KJFK",
     "name": "New York/JF Kennedy Intl",
@@ -59,12 +64,15 @@ TAF_KJFK = {
 }
 
 
+# Stand-in for a requests.Response so tests can control the status code
+# and JSON body that requests.get() appears to return.
 class FakeResponse:
     def __init__(self, json_data, status_code=200):
         self._json_data = json_data
         self.status_code = status_code
 
     def raise_for_status(self):
+        # Like the real one, raise on 4xx/5xx status codes.
         if self.status_code >= 400:
             raise weather.requests.HTTPError(f"{self.status_code} error")
 
@@ -73,18 +81,24 @@ class FakeResponse:
 
 
 def test_ids_param_single_string():
+    # A single airport code should be converted to uppercase.
     assert weather._ids_param("kjfk") == "KJFK"
 
 
 def test_ids_param_list():
+    # Multiple codes should be uppercased and joined with commas.
     assert weather._ids_param(["kjfk", "klax"]) == "KJFK,KLAX"
 
 
 def test_get_metar_single_airport(monkeypatch):
+    # A single airport code should return one dictionary with the
+    # METAR fields renamed to the ones the app uses.
     def fake_get(url, params=None, timeout=None):
+        # Check the request is built correctly, then return fake data.
         assert params == {"ids": "KJFK", "format": "json"}
         return FakeResponse([METAR_KJFK])
 
+    # Replace the real requests.get() with our fake for this test only.
     monkeypatch.setattr(weather.requests, "get", fake_get)
 
     result = weather.get_metar("KJFK")
@@ -97,6 +111,8 @@ def test_get_metar_single_airport(monkeypatch):
 
 
 def test_get_metar_multiple_airports(monkeypatch):
+    # A list of airport codes should return a list of dictionaries,
+    # in the same order the API sent them back.
     def fake_get(url, params=None, timeout=None):
         assert params == {"ids": "KJFK,KLAX", "format": "json"}
         return FakeResponse([METAR_KJFK, METAR_KLAX])
@@ -110,12 +126,16 @@ def test_get_metar_multiple_airports(monkeypatch):
 
 
 def test_get_metar_no_data_returns_none(monkeypatch):
+    # The API returns an empty list for an unknown airport. A single
+    # airport with no data should give back None instead of crashing.
     monkeypatch.setattr(weather.requests, "get", lambda *a, **kw: FakeResponse([]))
 
     assert weather.get_metar("ZZZZ") is None
 
 
 def test_get_metar_http_error_raises_weather_api_error(monkeypatch):
+    # A 500 response from the server should turn into our own
+    # WeatherAPIError, not a raw requests error.
     monkeypatch.setattr(weather.requests, "get", lambda *a, **kw: FakeResponse([], status_code=500))
 
     with pytest.raises(weather.WeatherAPIError):
@@ -123,6 +143,8 @@ def test_get_metar_http_error_raises_weather_api_error(monkeypatch):
 
 
 def test_get_taf_single_airport(monkeypatch):
+    # A single airport code should return one forecast dictionary,
+    # including its list of parsed forecast periods.
     def fake_get(url, params=None, timeout=None):
         assert params == {"ids": "KJFK", "format": "json"}
         return FakeResponse([TAF_KJFK])
@@ -133,6 +155,7 @@ def test_get_taf_single_airport(monkeypatch):
 
     assert result["icao"] == "KJFK"
     assert result["raw_text"].startswith("TAF KJFK")
+    # The one period in the fake data should be parsed with renamed fields.
     assert len(result["forecast"]) == 1
     assert result["forecast"][0]["wind_dir_deg"] == 200
     assert result["forecast"][0]["wind_speed_kt"] == 9
