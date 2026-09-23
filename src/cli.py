@@ -42,7 +42,7 @@ def run_cli():
     #to be found a valid ICAO ID by is_valid_icao_id.
     #Currently this only checks that the input message is 4 characters long, all of which belong to the english alphabet.
     if not is_valid_icao_id(destination_ICAO):
-            errors.append("Destination ICAO identifier must contain exactly 4 letters.")
+        errors.append("Destination ICAO identifier must contain exactly 4 letters.")
             
     #Informs the user of any errors with their input by checking if the errors list has any items in it. If it does then
     #it will work through each error and display them individually so that the user has a clear understanding of why their
