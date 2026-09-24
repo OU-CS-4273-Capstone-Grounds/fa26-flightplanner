@@ -184,19 +184,19 @@ class TestDistanceCalculation(unittest.TestCase):
     
     # Equator-->North Pole is 90 degrees of arc: a quarter of the circum.
     def test_equator_to_pole_is_quarter_circumference(self):
-        self.assertAlmostEqual(distance_nm((0, 0), (90, 0)), HALF_CIRCUMFERENCE_NM / 2, places=6)
+        self.assertAlmostEqual(distance_nm((0, 0), (90, 0)), HALF_CIRCUM_NM / 2, places=6)
     
      # North-->South Pole is 180 degrees of arc: half the circumference
     def test_pole_to_pole_is_half_circumference(self):
-        self.assertAlmostEqual(distance_nm((90, 0), (-90, 0)), HALF_CIRCUMFERENCE_NM, places=6)
+        self.assertAlmostEqual(distance_nm((90, 0), (-90, 0)), HALF_CIRCUM_NM, places=6)
  
     # Opposite sides of the equator are also half the circumference apart
     def test_antipodal_points_on_equator(self):
-        self.assertAlmostEqual(distance_nm((0, 0), (0, 180)), HALF_CIRCUMFERENCE_NM, places=6)
+        self.assertAlmostEqual(distance_nm((0, 0), (0, 180)), HALF_CIRCUM_NM, places=6)
     
     # Boundary: near antipodal points should not crash
     def test_near_antipodal_points_do_not_crash(self):
-        self.assertAlmostEqual(distance_nm((-82, -179), (82, 1)), HALF_CIRCUMFERENCE_NM, places=4)
+        self.assertAlmostEqual(distance_nm((-82, -179), (82, 1)), HALF_CIRCUM_NM, places=4)
     
     #--------- comparing to known values JFK-LAX-ORD, real-world application -------------------------
     
@@ -241,7 +241,7 @@ class TestDistanceCalculation(unittest.TestCase):
             with self.subTest(a=a, b=b):
                 d = distance_nm(a, b)
                 self.assertGreaterEqual(d, 0)
-                self.assertLessEqual(d, HALF_CIRCUMFERENCE_NM + 1e-6)
+                self.assertLessEqual(d, HALF_CIRCUM_NM + 1e-6)
     # Triangle inequality: a detour through a third point B can never be shorter than 
     # flying A -> C directly. Takes the random points in groups of three (a, b, c).
     def test_triangle_inequality(self):
