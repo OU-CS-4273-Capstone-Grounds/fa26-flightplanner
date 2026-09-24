@@ -85,6 +85,9 @@ def distance_nm(point1, point2):
 
     a = (math.sin(delta_lat / 2) ** 2
          + math.cos(lat1_rad) * math.cos(lat2_rad) * math.sin(delta_lon / 2) ** 2)
+    
+    # Guard against rounding pushing a above 1 (in case of antipodal points)
+    a = min(1.0, a)
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
 
     return EARTH_RADIUS_NM * c
