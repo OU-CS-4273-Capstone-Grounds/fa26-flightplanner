@@ -159,7 +159,7 @@ class TestCalculations(unittest.TestCase):
     def test_calculate_true_air_speed(self):
         density_altitude = 0
         power_setting = 75
-        expected = 123.88
+        expected = 107.65
         self.assertAlmostEqual(
             calculate_true_air_speed(density_altitude, power_setting),
             expected,

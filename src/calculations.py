@@ -192,7 +192,7 @@ def calculate_true_air_speed(density_altitude, power_setting):
     power_setting (float): The power setting as a percentage.
 
     Returns:
-    float: The calculated true air speed in miles per hour (mph).
+    float: The calculated true air speed in knots.
     """
     if power_setting < 50 or power_setting > 75:
         raise Exception("Power setting out of range (50-75)")
@@ -201,7 +201,7 @@ def calculate_true_air_speed(density_altitude, power_setting):
     mph_per_density_altitude = 0.0008722
     mph_per_percent_power = 1.0430 
 
-    return y_intercept + mph_per_density_altitude * density_altitude + mph_per_percent_power * power_setting
+    return mph_to_knots(y_intercept + mph_per_density_altitude * density_altitude + mph_per_percent_power * power_setting)
 
 def calculate_landing_distance(density_altitude):
     """
