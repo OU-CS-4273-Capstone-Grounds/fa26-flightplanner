@@ -1,10 +1,12 @@
-import re
+import airportsdata
+
+airports = airportsdata.load("ICAO")
 
 #Function to check if the inputted ICAO ID is a valid ICAO ID
 def is_valid_icao_id(icao_id):
     #Returns true if the input format matches those of ICAO IDs. 
     #Uses regular expressions to do the checking by making sure the input is comprised only of letters A-Z and has a length of 4.
-    return bool(re.fullmatch(r"[A-Z]{4}", icao_id))
+    return icao_id in airports
 
 #Function to run the command line interface.
 def run_cli():
@@ -31,7 +33,7 @@ def run_cli():
     #to be found a valid ICAO ID by is_valid_icao_id.
     #Currently this only checks that the input message is 4 characters long, all of which belong to the english alphabet.
     if not is_valid_icao_id(departure_ICAO):
-        errors.append("Departure ICAO identifier must contain exactly 4 letters.")
+        errors.append("Departure ICAO identifier is not a valid airport.")
         
     #Adds a message informing the user that their destination ICAO ID input was blank to the errors list if the input was
     #found to be blank.
@@ -42,7 +44,7 @@ def run_cli():
     #to be found a valid ICAO ID by is_valid_icao_id.
     #Currently this only checks that the input message is 4 characters long, all of which belong to the english alphabet.
     if not is_valid_icao_id(destination_ICAO):
-        errors.append("Destination ICAO identifier must contain exactly 4 letters.")
+        errors.append("Destination ICAO identifier is not a valid airport.")
             
     #Informs the user of any errors with their input by checking if the errors list has any items in it. If it does then
     #it will work through each error and display them individually so that the user has a clear understanding of why their

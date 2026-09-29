@@ -19,6 +19,9 @@ class TestICAOValidation(unittest.TestCase):
 
     def test_invalid_icao_id_contains_special_characters(self):
         self.assertFalse(is_valid_icao_id("K-JF"))
+        
+    def test_invalid_icao_id_not_in_airport_database(self):
+        self.assertFalse(is_valid_icao_id("ZZZZ"))
 
     def test_blank_icao_id(self):
         self.assertFalse(is_valid_icao_id(""))
@@ -44,7 +47,7 @@ class TestCLI(unittest.TestCase):
         )
         
         mock_print.assert_any_call(
-            "Departure ICAO identifier must contain exactly 4 letters."
+            "Departure ICAO identifier is not a valid airport."
         )
 
         mock_print.assert_any_call(
@@ -52,7 +55,7 @@ class TestCLI(unittest.TestCase):
         )
         
         mock_print.assert_any_call(
-            "Destination ICAO identifier must contain exactly 4 letters."
+            "Destination ICAO identifier is not a valid airport."
         )
 
     @patch("builtins.input", side_effect=["JFK", "LAX"])
@@ -61,11 +64,25 @@ class TestCLI(unittest.TestCase):
         run_cli()
 
         mock_print.assert_any_call(
-            "Departure ICAO identifier must contain exactly 4 letters."
+            "Departure ICAO identifier is not a valid airport."
         )
 
         mock_print.assert_any_call(
-            "Destination ICAO identifier must contain exactly 4 letters."
+            "Destination ICAO identifier is not a valid airport."
+        )
+        
+
+    @patch("builtins.input", side_effect=["ZZZZ", "XXXX"])
+    @patch("builtins.print")
+    def test_nonexistent_airports(self, mock_print, mock_input):
+        run_cli()
+
+        mock_print.assert_any_call(
+            "Departure ICAO identifier is not a valid airport."
+        )
+
+        mock_print.assert_any_call(
+            "Destination ICAO identifier is not a valid airport."
         )
         
 if __name__ == "__main__":
