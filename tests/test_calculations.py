@@ -112,15 +112,15 @@ class TestSpeedConversion(ConversionAssertions):
         self.assertRelClose(knots_to_mps(100), 100 * 1852 / 3600)
     
     # 1 mph = 1.609344 km/h exact
-    def test_mps_to_kmh(self):
+    def test_mph_to_kmh(self):
         self.assertRelClose(mph_to_kmh(100), 160.9344)
     
      # 1 mph = 1609.344 m per 3600 s = 0.44704 m/s exactly
-    def test_mps_to_mph(self):
+    def test_mph_to_mps(self):
         self.assertRelClose(mph_to_mps(100), 44.704)
         
     # 1 km/h = 1000 m per 3600 s, so 36 km/h = 10 m/s exactly
-    def test_kmh_to_mph(self):
+    def test_kmh_to_mps(self):
         self.assertRelClose(kmh_to_mps(36), 10)
         
     # Check each inverse conversion against definition
@@ -251,7 +251,7 @@ class TestDistanceCalculation(unittest.TestCase):
                 self.assertLessEqual(distance_nm(a, c), distance_nm(a, b) + distance_nm(b, c) + 1e-6)
 
 ##---------Total Distance (Multi-Leg) Route ---------------------------------------
-class TestRouteDirection(unittest.TestCase):
+class TestRouteDistance(unittest.TestCase):
     # Total route distance must = sum of the individual legs
     def test_route_is_sum_of_legs(self):
         route = [JFK, ORD, LAX]
