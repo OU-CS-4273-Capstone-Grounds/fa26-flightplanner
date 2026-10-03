@@ -1,9 +1,9 @@
 # Cross-Country Flight Planner
 ### CS 4273 Capstone Design Project (Fall 2026) - Group D
 
-**Last Updated:** September 8, 2026  
+**Last Updated:** September 30, 2026
 
-**Ticket:** 2 — Technology Identification
+**Tickets:** 2 — Technology Identification; CAPD-30 — Backend Hosting and Deployment Workflow
 > Reflects the team's current project scope, technology decisions, key feature and unit-test examples, goals, and development plan.
 
 ## Team Members
@@ -36,16 +36,61 @@ The software is intended to support the pilot's decision-making process rather t
 |---|---|
 | **Python** | Primary programming language for implementing mathematical and data-processing logic for calculations involving flight time, fuel consumption, climb and descent performance, waypoint calculations, aircraft performance information, and weather information|
 | **AviationWeather.gov / SkyVector.com APIs** | Live aviation weather data  [METAR](https://aviationweather.gov/api/data/metar) and [TAF](https://aviationweather.gov/api/data/taf) endpoints feed real wind, visibility, and forecast data into the planning calculations |
-| **Docker** | Containerizes the application for a consistent development and deployment environment across all team members |
-| **GitHub Actions** | CI/CD pipeline to runs automated unit tests and checks on every push/PR to catch issues early |
+| **Docker** | Packages the Python backend and its dependencies into an image for consistent development and deployment |
+| **GitHub Actions** | Runs automated tests and Docker build checks on pushes/PRs; planned deployment automation will publish images and trigger hosting updates after successful checks on `main` |
+| **GitHub Container Registry (GHCR)** | Will store versioned backend Docker images built by GitHub Actions |
+| **Render Web Service** | Will pull the backend image from GHCR and run the Python HTTP API at a public HTTPS URL |
+| **GitHub Pages** | Will host the static frontend, which calls the Render backend from the user's browser |
 | **Jira** | Project planning and task organization to track team progress |
 
 ### Learning Resources
 - Python: [learnpython.org](https://www.learnpython.org/)
 - GitHub Actions: [docs.github.com/en/actions](https://docs.github.com/en/actions)
 - Docker: [Docker 101 Tutorial](https://www.docker.com/101-tutorial/)
+- GHCR: [Publishing Docker images with GitHub Actions](https://docs.github.com/en/actions/tutorials/publish-packages/publish-docker-images)
+- Render: [Deploy a prebuilt Docker image](https://render.com/docs/deploying-an-image)
+- GitHub Pages: [What is GitHub Pages?](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)
 - Jira: [Atlassian Jira Getting Started Guide](https://www.atlassian.com/software/jira/guides/getting-started/introduction)
 - Aviation weather data: aviationweather.gov / SkyVector.com
+
+## Planned Hosting and Deployment Workflow
+
+The frontend will be hosted on **GitHub Pages**, and the Python backend will run as a **Render Web Service**. **GitHub Container Registry (GHCR)** will store the backend Docker images. GitHub Actions will connect these services by testing changes, building and publishing images, and triggering deployment.
+
+**Current status:** The repository has a Python CLI and CI jobs for unit tests and Docker builds. The HTTP API, frontend, image publishing, and hosting deployments still need to be implemented. Before deploying to Render, add an API layer (such as FastAPI) around the existing Python modules and change the container startup command to run an HTTP server instead of the interactive CLI.
+
+### Deployment Steps
+
+1. Team members push changes and open pull requests. GitHub Actions runs unit tests and checks that the Docker image builds.
+2. After changes merge into `main` and checks pass, GitHub Actions publishes the backend image to `ghcr.io/ou-cs-4273-capstone-grounds/fa26-flightplanner`, tagged with the commit SHA.
+3. GitHub Actions calls a Render deploy hook to deploy the published image. Render pulls it from GHCR and starts the backend. Publishing a new image alone does not trigger a Render deployment.
+4. The frontend is built and deployed to GitHub Pages after successful checks on `main`.
+5. Users open the frontend in their browser. It sends HTTPS requests to the Render API, which performs calculations or fetches aviation weather and returns JSON results.
+
+### Workflow Diagram
+
+```mermaid
+flowchart TD
+    A["Team pushes code / opens a pull request"] --> B["GitHub Actions: tests and Docker build check"]
+    B --> C{"Checks pass?"}
+    C -->|No| D["Fix errors before deployment"]
+    C -->|Yes| E{"Push to main?"}
+    E -->|No| F["Ready for review; no deployment"]
+    E -->|Yes| G["Publish backend Docker image to GHCR"]
+    G --> H["Trigger Render deploy hook"]
+    H --> I["Render pulls image and runs Python API"]
+    E -->|Yes| J["Build frontend and deploy to GitHub Pages"]
+    J --> K["User opens frontend in browser"]
+    K <-->|HTTPS requests / JSON results| I
+    I <-->|Weather requests / responses| L["AviationWeather.gov"]
+```
+
+### Hosting Configuration
+
+- **Image publishing:** Use the GitHub Actions `GITHUB_TOKEN` with `contents: read` and `packages: write`. Build a `linux/amd64` image for Render and deploy a specific image digest or commit tag so releases are traceable.
+- **Render:** Select **Web Service**, then **Existing Image**, and supply the GHCR image URL. If the image is private, configure a registry credential with `read:packages`. Store the Render deploy hook URL as a GitHub Actions secret.
+- **Backend:** Listen on `0.0.0.0` and the port configured by Render. Allow the frontend origin, `https://ou-cs-4273-capstone-grounds.github.io`, through CORS.
+- **Frontend:** Configure the Render API's HTTPS URL and the GitHub Pages project base path, `/fa26-flightplanner/`. Keep credentials in backend environment variables or GitHub Actions secrets.
 
 ## Key Project Feature: Density Altitude Calculation
 
