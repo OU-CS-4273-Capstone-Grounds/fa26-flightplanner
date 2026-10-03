@@ -1,10 +1,10 @@
 # Cross-Country Flight Planner
 ### CS 4273 Capstone Design Project (Fall 2026) - Group D
 
-**Last Updated:** September 8, 2026  
+**Last Updated:** October 3, 2026
 
 **Ticket:** 2 — Technology Identification
-> Reflects the team's current project scope, technology decisions, key feature and unit-test examples, goals, and development plan.
+> Reflects the team's current project scope, technology decisions, key feature, goals, and development plan.
 
 ## Team Members
 - Reese Zimmermann — Product Owner
@@ -29,6 +29,30 @@ The goal of this project is to create a system intended to serve two purposes:
 2. **Learning and practice** — Allow users to practice and better understand the calculations and decision-making involved in traditional flight planning.
 
 The software is intended to support the pilot's decision-making process rather than replace official aviation resources or pilot judgment.
+
+## Start the CLI
+
+### Run locally
+
+Python 3.13 is recommended. From the repository root, create and activate a virtual environment, install the dependencies, and start the CLI:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+python -m src.main
+```
+
+The CLI will prompt you for the four-letter ICAO identifiers of the departure and destination airports.
+
+### Run with Docker
+
+From the repository root, build the image and run it with an interactive terminal:
+
+```bash
+docker build -t flight-planner .
+docker run --rm -it flight-planner
+```
 
 ## Identified Technologies & Tools
 
@@ -58,66 +82,6 @@ One of the calculations the system replaces from the E6-B and paper performance 
 **Output:** Density Altitude (ft) — used downstream by the system to look up expected climb rate, true airspeed, takeoff/landing distance, and fuel range for the planned flight.
 
 **Why this feature matters:** Nearly every aircraft performance figure (climb rate, takeoff roll, landing distance, range) is only accurate once corrected for density altitude. Getting this calculation right is important for the rest of the performance-planning features build on.
-
----
-## Unit Test Examples
-
-The following unit tests represent the **Density Altitude Calculation** feature using the same inputs and expected output in Python, JavaScript, and Java.
-
-### Python
-
-```python
-import pytest
-from performance import calculate_density_altitude  # not implemented yet
-
-def test_calculate_density_altitude_basic():
-    result = calculate_density_altitude(
-        pressure_altitude=2500,
-        oat_celsius=25
-    )
-
-    assert result == pytest.approx(4300, abs=1)
-```
-
-### JavaScript
-
-```javascript
-import { calculateDensityAltitude } from '../performance';
-
-test('calculateDensityAltitude returns correct density altitude', () => {
-  const result = calculateDensityAltitude(2500, 25);
-
-  expect(result).toBeCloseTo(4300, 0);
-});
-```
-
-### Java
-
-```java
-import org.junit.jupiter.api.Test;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-class PerformanceTest {
-
-    @Test
-    void calculateDensityAltitude_returnsExpectedValue() {
-        double result = Performance.calculateDensityAltitude(2500, 25);
-
-        assertEquals(4300, result, 1);
-    }
-}
-```
-
-### Test Scenario
-
-- **Pressure Altitude:** 2,500 ft
-- **Outside Air Temperature:** 25°C
-- **Expected Density Altitude:** approximately 4,300 ft
-
-All three tests evaluate the same Density Altitude Calculation feature using the same inputs and expected result. The calculation function has not yet been implemented; these tests define the expected behavior for future development.
-
----
-
 
 ## Goals & Progress Plan
 
