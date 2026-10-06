@@ -10,7 +10,7 @@ from src.calculations import (
     route_distance_nm, bearing_deg, route_bearings_deg,
     calculate_pressure_altitude,calculate_density_altitude, calculate_rate_of_climb,
     calculate_takeoff_distance, calculate_landing_distance, calculate_true_air_speed,
-  
+    time_of_flight_hours, time_of_flight_minutes, route_time_of_flight_hours,
 )
 ## coordinates for testing distance and bearing calculations (lat,lon)
 JFK = (40.6413, -73.7781)
@@ -401,6 +401,75 @@ class TestRouteBearings(unittest.TestCase):
     def test_single_point_route(self):
         self.assertEqual(route_bearings_deg([(35, -97)]), [])
             
+
+#--------------- Time of Flight ------------------------------
+
+class TestTimeOfFlight(unittest.TestCase):
+    def test_basic_example(self):
+        # 120 nm at 120 kt should be exactly 1 hour
+        self.assertAlmostEqual(time_of_flight_hours(120, 120), 1.0, places=9)
+
+    def test_minutes_example(self):
+        # 90 nm at 120 kt = 0.75 hr = 45 min
+        self.assertAlmostEqual(time_of_flight_minutes(90, 120), 45, places=9)
+
+    def test_minutes_is_sixty_times_hours(self):
+        for distance, speed in [(50, 100), (250, 110), (1, 90)]:
+            with self.subTest(distance=distance, speed=speed):
+                self.assertAlmostEqual(time_of_flight_minutes(distance, speed),
+                                       time_of_flight_hours(distance, speed) * 60, places=9)
+
+    def test_zero_distance(self):
+        self.assertEqual(time_of_flight_hours(0, 100), 0)
+
+    def test_scaling(self):
+        # 100 nm at 100 kt is 1 hr, so twice the distance should be 2 hr
+        # and twice the speed should be 0.5 hr
+        self.assertAlmostEqual(time_of_flight_hours(200, 100), 2.0, places=9)
+        self.assertAlmostEqual(time_of_flight_hours(100, 200), 0.5, places=9)
+
+    def test_invalid_ground_speed_raises(self):
+        with self.assertRaises(ValueError):
+            time_of_flight_hours(100, 0)
+        with self.assertRaises(ValueError):
+            time_of_flight_hours(100, -50)
+
+    def test_negative_distance_raises(self):
+        with self.assertRaises(ValueError):
+            time_of_flight_hours(-10, 100)
+
+
+class TestRouteTimeOfFlight(unittest.TestCase):
+    def test_known_route(self):
+        # 60 nm at 120 kt (0.5 hr) + 100 nm at 100 kt (1 hr) = 1.5 hr
+        self.assertAlmostEqual(route_time_of_flight_hours([60, 100], [120, 100]), 1.5, places=9)
+
+    def test_total_is_sum_of_legs(self):
+        distances = [45, 80, 120]
+        speeds = [110, 95, 130]
+        expected = 0
+        for i in range(len(distances)):
+            expected += time_of_flight_hours(distances[i], speeds[i])
+        self.assertAlmostEqual(route_time_of_flight_hours(distances, speeds), expected, places=9)
+
+    def test_single_leg(self):
+        self.assertAlmostEqual(route_time_of_flight_hours([150], [100]),
+                               time_of_flight_hours(150, 100), places=9)
+
+    def test_empty_route(self):
+        self.assertEqual(route_time_of_flight_hours([], []), 0)
+
+    def test_mismatched_lengths_raise(self):
+        with self.assertRaises(ValueError):
+            route_time_of_flight_hours([60, 100], [120])
+
+    def test_with_route_distance(self):
+        # use the existing distance functions for JFK -> ORD -> LAX at 120 kt the whole way
+        route = [JFK, ORD, LAX]
+        leg_distances = [distance_nm(route[0], route[1]), distance_nm(route[1], route[2])]
+        expected = route_distance_nm(route) / 120
+        self.assertAlmostEqual(route_time_of_flight_hours(leg_distances, [120, 120]), expected, places=9)
+
 
 class TestCalculations(unittest.TestCase):
  
