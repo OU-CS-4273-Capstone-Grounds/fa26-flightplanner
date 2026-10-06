@@ -7,7 +7,8 @@ from src.calculations import (
     knots_to_mph, mph_to_knots, knots_to_kmh, kmh_to_knots,
     knots_to_mps, mps_to_knots, mph_to_kmh, kmh_to_mph,
     mph_to_mps, mps_to_mph, kmh_to_mps, mps_to_kmh, distance_nm, 
-    route_distance_nm, bearing_deg, route_bearings_deg,
+    route_distance_nm, bearing_deg, route_bearings_deg, wind_angle_rad, 
+    wind_correction_angle, true_heading, ground_speed,
     calculate_pressure_altitude,calculate_density_altitude, calculate_rate_of_climb,
     calculate_takeoff_distance, calculate_landing_distance, calculate_true_air_speed,
   
@@ -400,7 +401,236 @@ class TestRouteBearings(unittest.TestCase):
     # Boundary: a single point has no legs, so no bearings
     def test_single_point_route(self):
         self.assertEqual(route_bearings_deg([(35, -97)]), [])
-            
+
+##------------ Wind Triangle Functions ---------------------------------------
+# Argument order for every function: (true_course, true_airspeed, wind_direction, wind_speed)
+# Expected values are derived by hand (right-triangle trig or vector addition)
+
+WIND_FUNCS = [wind_angle_rad, wind_correction_angle, true_heading, ground_speed]
+
+# Wind_angle_rad: input validation + angle between the wind and the course
+class TestWindTriangle(unittest.TestCase):
+    
+    # Wind 90 degrees to the right of the course is +pi/2 radians
+    def test_wind_from_right_is_positive_quarter_turn(self):
+        self.assertAlmostEqual(wind_angle_rad(0, 100, 90, 10), math.pi / 2, places=12)
+ 
+    # Wind 90 degrees to the left of the course is -pi/2 radians (sign carries the side)
+    def test_wind_from_left_is_negative_quarter_turn(self):
+        self.assertAlmostEqual(wind_angle_rad(90, 100, 0, 10), -math.pi / 2, places=12)
+ 
+    # Wind straight down the nose is 0, wind straight from behind is pi
+    def test_headwind_is_zero_and_tailwind_is_pi(self):
+        self.assertAlmostEqual(wind_angle_rad(270, 100, 270, 10), 0, places=12)
+        self.assertAlmostEqual(abs(wind_angle_rad(90, 100, 270, 10)), math.pi, places=12)
+ 
+    # Boundary: zero wind is valid (calm), validation must use < 0, not <= 0
+    def test_zero_wind_speed_is_allowed(self):
+        self.assertAlmostEqual(wind_angle_rad(0, 100, 30, 0), math.radians(30), places=12)
+
+## Wind Correction Angle
+class TestWindCorrectionAngle(unittest.TestCase):
+ 
+    # Calm wind needs no correction, whatever the stated direction
+    def test_calm_wind_has_no_correction(self):
+        for course in [0, 90, 213, 359]:
+            with self.subTest(course=course):
+                self.assertAlmostEqual(wind_correction_angle(course, 110, 270, 0), 0, places=9)
+
+# Wind straight down the nose or straight from behind has no crosswind, so no correction
+    def test_pure_headwind_and_tailwind_have_no_correction(self):
+        self.assertAlmostEqual(wind_correction_angle(90, 100, 90, 20), 0, places=9)
+        self.assertAlmostEqual(wind_correction_angle(90, 100, 270, 20), 0, places=9)
+ 
+    # 90 degree crosswind: whole wind is crosswind, WCA = asin(W / TAS)
+    def test_direct_crosswind_from_right_is_positive(self):
+        expected = math.degrees(math.asin(20 / 100))  # ~11.54
+        self.assertAlmostEqual(wind_correction_angle(0, 100, 90, 20), expected, places=9)
+ 
+    def test_direct_crosswind_from_left_is_negative(self):
+        expected = math.degrees(math.asin(20 / 100))
+        self.assertAlmostEqual(wind_correction_angle(0, 100, 270, 20), -expected, places=9)
+ 
+    # Quartering headwind: course 090, TAS 120, wind 030 @ 20
+    # crosswind = 20 sin(-60) ~ -17.32, WCA = asin(-17.32 / 120) ~ -8.2989
+    def test_quartering_headwind_example(self):
+        self.assertAlmostEqual(wind_correction_angle(90, 120, 30, 20), -8.2989, places=3)
+ 
+    # Quartering tailwind: wind 210 @ 20, same course and TAS
+    # crosswind = 20 sin(120) ~ +17.32, WCA ~ +8.2989 (headwind/tailwind doesn't change WCA)
+    def test_quartering_tailwind_example(self):
+        self.assertAlmostEqual(wind_correction_angle(90, 120, 210, 20), 8.2989, places=3)
+ 
+    # Mirroring the wind across the course flips the WCA sign and keeps its size
+    def test_mirrored_wind_flips_sign(self):
+        course = 120
+        for offset in [10, 45, 90, 135, 170]:
+            with self.subTest(offset=offset):
+                self.assertAlmostEqual(wind_correction_angle(course, 100, course + offset, 25),
+                                       -wind_correction_angle(course, 100, course - offset, 25), places=9)
+ 
+    # Directions 0 and 360 are the same, as are courses outside 0-360
+    def test_equivalent_directions_give_same_wca(self):
+        self.assertAlmostEqual(wind_correction_angle(360, 100, 45, 15),
+                               wind_correction_angle(0, 100, 45, 15), places=9)
+        self.assertAlmostEqual(wind_correction_angle(-90, 100, 45, 15),
+                               wind_correction_angle(270, 100, 45, 15), places=9)
+ 
+    # Boundary: crosswind exactly equal to TAS is a 90 degree crab, still solvable
+    def test_crosswind_equal_to_airspeed_is_90_degree_crab(self):
+        self.assertAlmostEqual(wind_correction_angle(0, 50, 90, 50), 90, places=9)
+        
+# Crab: flying with nose pointed partly into a crosswind so that plane is traveling "striaght" along its course
+
+## True Heading
+class TestTrueHeading(unittest.TestCase):
+ 
+    # Calm wind: heading equals course
+    def test_calm_wind_heading_equals_course(self):
+        for course in [0, 90, 213, 359]:
+            with self.subTest(course=course):
+                self.assertAlmostEqual(true_heading(course, 110, 270, 0), course, places=9)
+ 
+    # Wind from the right turns the nose right of the course
+    def test_crosswind_from_right(self):
+        expected = math.degrees(math.asin(20 / 100))
+        self.assertAlmostEqual(true_heading(0, 100, 90, 20), expected, places=9)
+ 
+    # Wind from the left on course 000: heading wraps to just below 360, not a negative number
+    def test_crosswind_from_left_wraps_below_360(self):
+        expected = 360 - math.degrees(math.asin(20 / 100))
+        self.assertAlmostEqual(true_heading(0, 100, 270, 20), expected, places=9)
+ 
+    # Course near 360 with wind from the right: heading wraps past north to a small value
+    def test_heading_wraps_past_360(self):
+        # Wind 090 is 95 degrees right of course 355: crosswind = 20 sin(95), WCA ~ +11.49
+        heading = true_heading(355, 100, 90, 20)  # 355 + ~11.49 = ~006.49
+        expected_wca = math.degrees(math.asin(20 * math.sin(math.radians(95)) / 100))
+        self.assertAlmostEqual(heading, (355 + expected_wca) % 360, places=9)
+ 
+    # Quartering headwind example: 090 + (-8.2989) = 081.7011
+    def test_quartering_headwind_example(self):
+        self.assertAlmostEqual(true_heading(90, 120, 30, 20), 81.7011, places=3)
+ 
+    # Courses written outside 0-360 still give a heading in [0, 360)
+    def test_course_outside_0_360_is_normalized(self):
+        for unwrapped, wrapped in [(450, 90), (-90, 270), (720, 0)]:
+            with self.subTest(course=unwrapped):
+                heading = true_heading(unwrapped, 100, 45, 15)
+                self.assertAlmostEqual(heading, true_heading(wrapped, 100, 45, 15), places=9)
+                self.assertGreaterEqual(heading, 0)
+                self.assertLess(heading, 360)
+ 
+## Ground Speed
+class TestGroundSpeed(unittest.TestCase):
+ 
+    # Calm wind: ground speed equals true airspeed
+    def test_calm_wind_ground_speed_equals_tas(self):
+        self.assertAlmostEqual(ground_speed(213, 110, 270, 0), 110, places=9)
+ 
+    # Direct headwind subtracts, direct tailwind adds
+    def test_direct_headwind(self):
+        self.assertAlmostEqual(ground_speed(90, 100, 90, 20), 80, places=9)
+ 
+    def test_direct_tailwind(self):
+        self.assertAlmostEqual(ground_speed(90, 100, 270, 20), 120, places=9)
+ 
+    # A tailwind stronger than the airspeed is still a valid flight
+    def test_tailwind_stronger_than_airspeed(self):
+        self.assertAlmostEqual(ground_speed(0, 50, 180, 80), 130, places=9)
+ 
+    # 90 degree crosswind: right triangle, GS = sqrt(TAS^2 - W^2)
+    def test_direct_crosswind_right_triangle(self):
+        self.assertAlmostEqual(ground_speed(0, 100, 90, 20), math.sqrt(100**2 - 20**2), places=9)
+ 
+    # Quartering headwind: 120 cos(8.2989) - 20 cos(60) = 118.7434 - 10 = 108.7434
+    def test_quartering_headwind_example(self):
+        self.assertAlmostEqual(ground_speed(90, 120, 30, 20), 108.7434, places=3)
+ 
+    # Quartering tailwind: 118.7434 + 10 = 128.7434
+    def test_quartering_tailwind_example(self):
+        self.assertAlmostEqual(ground_speed(90, 120, 210, 20), 128.7434, places=3)
+ 
+    # Mirroring wind across the course leaves ground speed unchanged
+    def test_mirrored_wind_same_ground_speed(self):
+        course = 120
+        for offset in [10, 45, 90, 135, 170]:
+            with self.subTest(offset=offset):
+                self.assertAlmostEqual(ground_speed(course, 100, course + offset, 25),
+                                       ground_speed(course, 100, course - offset, 25), places=9)
+ 
+    # Directions 0 and 360 are the same
+    def test_360_and_0_are_same_direction(self):
+        self.assertAlmostEqual(ground_speed(90, 100, 360, 15), ground_speed(90, 100, 0, 15), places=9)
+ 
+ 
+## Independent check: heading + ground speed against plain vector addition
+class TestWindTriangleVectors(unittest.TestCase):
+    # Flying the computed heading at TAS, plus the wind vector, must produce a ground track
+    # exactly along the course at the computed ground speed. Uses north/east components only.
+    def test_heading_and_wind_vectors_sum_to_course_and_ground_speed(self):
+        rand_num_gen = random.Random(4273)
+        for _ in range(50):
+            course = rand_num_gen.uniform(0, 360)
+            tas = rand_num_gen.uniform(60, 200)
+            wind_dir = rand_num_gen.uniform(0, 360)
+            wind_speed = rand_num_gen.uniform(0, 0.9 * tas)
+            with self.subTest(course=course, tas=tas, wind_dir=wind_dir, wind_speed=wind_speed):
+                heading = math.radians(true_heading(course, tas, wind_dir, wind_speed))
+                gs = ground_speed(course, tas, wind_dir, wind_speed)
+ 
+                # Wind blows FROM wind_dir, so it pushes the aircraft toward wind_dir + 180
+                wind_to = math.radians(wind_dir + 180)
+                north = tas * math.cos(heading) + wind_speed * math.cos(wind_to)
+                east = tas * math.sin(heading) + wind_speed * math.sin(wind_to)
+ 
+                track = math.degrees(math.atan2(east, north)) % 360
+                track_error = (track - course + 180) % 360 - 180
+                self.assertAlmostEqual(track_error, 0, places=6)
+                self.assertAlmostEqual(math.hypot(north, east), gs, places=6)
+ 
+ 
+## Invalid input: every function validates through wind_angle_rad
+class TestWindTriangleInvalidInput(unittest.TestCase):
+    # Zero or negative airspeed is meaningless
+    def test_non_positive_airspeed_raises(self):
+        for func in WIND_FUNCS:
+            for tas in [0, -50]:
+                with self.subTest(func=func.__name__, tas=tas):
+                    with self.assertRaisesRegex(ValueError, "airspeed must be greater than 0"):
+                        func(90, tas, 0, 10)
+ 
+    # Negative wind speed is invalid (direction already encodes where it comes from)
+    def test_negative_wind_speed_raises(self):
+        for func in WIND_FUNCS:
+            with self.subTest(func=func.__name__):
+                with self.assertRaisesRegex(ValueError, "Wind speed cannot be negative"):
+                    func(90, 100, 0, -10)
+ 
+    # Crosswind faster than the airspeed: no heading can hold the course
+    def test_crosswind_exceeding_airspeed_raises(self):
+        for func in [wind_correction_angle, true_heading, ground_speed]:
+            with self.subTest(func=func.__name__):
+                with self.assertRaisesRegex(ValueError, "Crosswind"):
+                    func(0, 50, 90, 60)
+ 
+    # Headwind at or above airspeed: no forward progress
+    def test_headwind_at_or_above_airspeed_raises(self):
+        for wind_speed in [100, 120]:
+            with self.subTest(wind_speed=wind_speed):
+                with self.assertRaisesRegex(ValueError, "Headwind"):
+                    ground_speed(0, 100, 0, wind_speed)
+ 
+    # Boundary: at a 90 degree crab the heading is solvable, but the aircraft points
+    # sideways and makes no progress along the course, so ground speed raises
+    def test_90_degree_crab_heading_ok_but_ground_speed_raises(self):
+        self.assertAlmostEqual(true_heading(0, 50, 90, 50), 90, places=9)
+        with self.assertRaises(ValueError):
+            ground_speed(0, 50, 90, 50)
+ 
+    # Headwind just below airspeed = still valid (boundary on the other side)
+    def test_headwind_just_below_airspeed_is_valid(self):
+        self.assertAlmostEqual(ground_speed(0, 100, 0, 99), 1, places=9)
 
 class TestCalculations(unittest.TestCase):
  
@@ -482,6 +712,5 @@ class TestCalculations(unittest.TestCase):
         with self.assertRaises(Exception):
             calculate_true_air_speed(density_altitude, power_setting)
             
-
 if __name__ == "__main__":
     unittest.main()
