@@ -27,3 +27,10 @@ jobs:
   
       - name: Build Docker image
         run: docker build -t flightplanner .  
+
+      - name: Check API container startup
+        run: |
+          docker run -d --name flightplanner-api -p 8000:8000 flightplanner
+          trap 'docker logs flightplanner-api; docker rm -f flightplanner-api' EXIT
+          # Docker can reset connections while Uvicorn is still starting.
+          curl --fail --show-error --retry 30 --retry-all-errors --retry-delay 1 --connect-timeout 2 --max-time 5 --retry-max-time 60 http://127.0.0.1:8000/health
