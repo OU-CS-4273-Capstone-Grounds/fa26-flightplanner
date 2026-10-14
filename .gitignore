@@ -16,6 +16,9 @@ build/
 dist/
 *.egg-info/
 
+# Node.js dependencies
+node_modules/
+
 # Coverage output
 .coverage
 .coverage.*
