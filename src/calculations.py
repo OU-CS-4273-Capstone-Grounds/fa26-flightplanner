@@ -247,3 +247,57 @@ def calculate_takeoff_distance(density_altitude):
     over_50_feet_obstacle =(density_altitude/slope_over_50_feet_obstacle) + (y_intercept_over_50_feet_obstacle/slope_over_50_feet_obstacle)
 
     return ground_run, over_50_feet_obstacle
+
+
+""" Wind Triangle Functions
+    (Match METAR/TAF data from weather.py)
+    - wind_direction: direction the wind is blowing FROM, degrees true
+    - true_airspeed and wind_speed: knots
+"""
+
+# Validate wind triangle inputs (shared by every public wind function)
+def _validate_wind_inputs(true_airspeed, wind_speed):
+    if true_airspeed <= 0:
+        raise ValueError(f"True airspeed must be greater than 0 (got {true_airspeed} kt)")
+    if wind_speed < 0:
+        raise ValueError("Wind speed cannot be negative")
+        raise ValueError(f"Wind speed cannot be negative (got {wind_speed} kt)")
+
+def wind_angle_rad(true_course, wind_direction):
+    return math.radians(wind_direction - true_course)
+
+# Wind Correction Angle (WCA) Calculation:
+## formula: WCA = arcsin((wind_speed * sin(wind_angle)) / true_airspeed)
+# Positive = wind from the right, Negative = wind from the left
+def wind_correction_angle(true_course, true_airspeed, wind_direction, wind_speed):
+    _validate_wind_inputs(true_airspeed, wind_speed)
+    wind_angle = wind_angle_rad(true_course, wind_direction)
+                                 
+    crosswind = wind_speed * math.sin(wind_angle)
+    
+    if abs(crosswind) > true_airspeed:
+        raise ValueError(
+            f"Crosswind component ({abs(crosswind):.1f} kt) exceeds "
+            f"true airspeed ({true_airspeed:.1f} kt), course cannot be held"
+        )
+    
+    return math.degrees(math.asin(crosswind / true_airspeed))
+    
+    # True Heading Calculation (true north): 
+def true_heading(true_course, true_airspeed, wind_direction, wind_speed):
+    wca = wind_correction_angle(true_course, true_airspeed, wind_direction, wind_speed)
+    return (true_course + wca) % 360
+    
+    # Ground Speed Calculation (knots, along true course):
+def ground_speed(true_course, true_airspeed, wind_direction, wind_speed):
+    wca = wind_correction_angle(true_course, true_airspeed, wind_direction, wind_speed)
+    
+    wind_angle = wind_angle_rad(true_course, wind_direction)
+    
+    speed = true_airspeed * math.cos(math.radians(wca)) - wind_speed * math.cos(wind_angle)
+    
+    # Headwind is at least as strong as the airspeed, no progress along course
+    if speed <= 0:
+        raise ValueError("Headwind is at least as strong as the airspeed, no progress along course")
+    return speed
+    
