@@ -406,27 +406,27 @@ class TestRouteBearings(unittest.TestCase):
 # Argument order for every function: (true_course, true_airspeed, wind_direction, wind_speed)
 # Expected values are derived by hand (right-triangle trig or vector addition)
 
-WIND_FUNCS = [wind_angle_rad, wind_correction_angle, true_heading, ground_speed]
+WIND_FUNCS = [wind_correction_angle, true_heading, ground_speed]
 
-# Wind_angle_rad: input validation + angle between the wind and the course
+# wind_angle_rad: angle between the wind and the course (validation lives in the public functions)
 class TestWindTriangle(unittest.TestCase):
     
     # Wind 90 degrees to the right of the course is +pi/2 radians
     def test_wind_from_right_is_positive_quarter_turn(self):
-        self.assertAlmostEqual(wind_angle_rad(0, 100, 90, 10), math.pi / 2, places=12)
+        self.assertAlmostEqual(wind_angle_rad(0, 90), math.pi / 2, places=12)
  
     # Wind 90 degrees to the left of the course is -pi/2 radians (sign carries the side)
     def test_wind_from_left_is_negative_quarter_turn(self):
-        self.assertAlmostEqual(wind_angle_rad(90, 100, 0, 10), -math.pi / 2, places=12)
+        self.assertAlmostEqual(wind_angle_rad(90, 0), -math.pi / 2, places=12)
  
     # Wind straight down the nose is 0, wind straight from behind is pi
     def test_headwind_is_zero_and_tailwind_is_pi(self):
-        self.assertAlmostEqual(wind_angle_rad(270, 100, 270, 10), 0, places=12)
-        self.assertAlmostEqual(abs(wind_angle_rad(90, 100, 270, 10)), math.pi, places=12)
+        self.assertAlmostEqual(wind_angle_rad(270, 270), 0, places=12)
+        self.assertAlmostEqual(abs(wind_angle_rad(90, 270)), math.pi, places=12)
  
     # Boundary: zero wind is valid (calm), validation must use < 0, not <= 0
-    def test_zero_wind_speed_is_allowed(self):
-        self.assertAlmostEqual(wind_angle_rad(0, 100, 30, 0), math.radians(30), places=12)
+    def test_returns_radians_wind_minus_course(self):
+        self.assertAlmostEqual(wind_angle_rad(10, 40), math.radians(30), places=12)
 
 ## Wind Correction Angle
 class TestWindCorrectionAngle(unittest.TestCase):
@@ -613,6 +613,10 @@ class TestWindTriangleInvalidInput(unittest.TestCase):
             with self.subTest(func=func.__name__):
                 with self.assertRaisesRegex(ValueError, "Crosswind"):
                     func(0, 50, 90, 60)
+                    
+    def test_crosswind_error_message_includes_values(self):
+        with self.assertRaisesRegex(ValueError, r"\(60\.0 kt\).*\(50\.0 kt\)"):
+            wind_correction_angle(0, 50, 90, 60)
  
     # Headwind at or above airspeed: no forward progress
     def test_headwind_at_or_above_airspeed_raises(self):
