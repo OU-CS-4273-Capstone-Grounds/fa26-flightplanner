@@ -48,8 +48,33 @@ From the repository root, build the image and run it with an interactive termina
 
 ```bash
 docker build -t flight-planner .
-docker run --rm -it flight-planner
+docker run --rm -it flight-planner python -m src.main
 ```
+
+## Start the API
+
+Install `requirements.txt` using the virtual environment instructions above, then run:
+
+```bash
+python -m uvicorn src.api:app --reload
+```
+
+The API runs at `http://127.0.0.1:8000`. Open `/docs` for interactive API documentation
+or `/openapi.json` for the schema. The CLI remains available through `python -m src.main`.
+
+- `GET /health` returns `{"status":"ok"}` without calling external services.
+- `POST /api/v1/calculations/density-altitude` calls the existing calculation function.
+
+To run the API in Docker:
+
+```bash
+docker build -t flight-planner .
+docker run --rm -p 8000:8000 flight-planner
+```
+
+Run all tests with `python -m pytest tests -v`. API tests use FastAPI's TestClient
+and do not need a running server or weather service. Add future endpoints in
+`src/api.py`, keeping calculation logic in `src/calculations.py`.
 
 ## Identified Technologies & Tools
 
@@ -78,7 +103,7 @@ docker run --rm -it flight-planner
 
 The frontend will be hosted on **GitHub Pages**, and the Python backend will run as a **Render Web Service**. **GitHub Container Registry (GHCR)** will store the backend Docker images. GitHub Actions will connect these services by testing changes, building and publishing images, and triggering deployment.
 
-**Current status:** The repository has a Python CLI and CI jobs for unit tests and Docker builds. The HTTP API, frontend, image publishing, and hosting deployments still need to be implemented. Before deploying to Render, add an API layer (such as FastAPI) around the existing Python modules and change the container startup command to run an HTTP server instead of the interactive CLI.
+**Current status:** The repository has a Python CLI and a basic FastAPI API with health and density-altitude endpoints. Docker starts the HTTP server on port 8000, and CI runs tests and container startup checks. Additional API endpoints, frontend integration, image publishing, and hosting deployments still need to be implemented. Configure the hosting port and frontend CORS origin when adding deployment support.
 
 ### Deployment Steps
 
