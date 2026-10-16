@@ -1,21 +1,37 @@
 # Cross-Country Flight Planner
+
+[![CI](https://github.com/OU-CS-4273-Capstone-Grounds/fa26-flightplanner/actions/workflows/ci.yml/badge.svg)](https://github.com/OU-CS-4273-Capstone-Grounds/fa26-flightplanner/actions/workflows/ci.yml)
+![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
+
 ### CS 4273 Capstone Design Project (Fall 2026) - Group D
 
 **Last Updated:** October 6, 2026
 
-## Team Members
-- Reese Zimmermann — Product Owner
-- Avinash Kandadi — Sprint Master 1
-- Sahith Gondi — Sprint Master 2
-- Sean Ropp — Sprint Master 3
-- Elise Alvarado — Sprint Master 4
-- Nic Grounds — Mentor / Client
+A software-based system that helps pilots plan cross-country flights, replacing the traditional pen-and-paper process, and that doubles as a step-by-step learning and practice tool for students and new pilots.
+
+## Table of Contents
+
+- [Project Description](#project-description)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Installation](#installation)
+- [Usage](#usage)
+  - [Start the API](#start-the-api)
+  - [Start the CLI](#start-the-cli)
+  - [Running Tests](#running-tests)
+- [Technologies & Tools](#technologies--tools)
+- [Planned Hosting and Deployment Workflow](#planned-hosting-and-deployment-workflow)
+- [Goals & Progress Plan](#goals--progress-plan)
+- [Contributing](#contributing)
+- [Team Members](#team-members)
+- [License](#license)
+- [Repository](#repository)
 
 ## Project Description
 
 The Flight Planner project is a software-based system designed to assist pilots with cross-country flight planning by replacing the traditional pen-and-paper process used.
 
-Traditionally, pilots use paper navigation logs, aircraft performance information, weather data, route information, and tools such as the 
+Traditionally, pilots use paper navigation logs, aircraft performance information, weather data, route information, and tools such as the
 E6-B flight computer to determine factors including distance, flight time, fuel consumption, headings, waypoints, climb performance, and descent performance.
 
 Beyond serving solely as a planning tool, the system is designed to double as a **learning and practice tool**, helping students and new pilots understand and work through the flight-planning process step-by-step, rather than simply producing a final number.
@@ -27,56 +43,143 @@ The goal of this project is to create a system intended to serve two purposes:
 
 The software is intended to support the pilot's decision-making process rather than replace official aviation resources or pilot judgment.
 
-## Start the CLI
+## Features
 
-### Run locally
+**Available now:**
 
-Python 3.13 is recommended. From the repository root, create and activate a virtual environment, install the dependencies, and start the CLI:
+- **Command-line interface** — prompts for departure and destination ICAO airport identifiers and validates them.
+- **HTTP API** (FastAPI) — health check and density-altitude endpoints, with interactive docs at `/docs`.
+- **Live aviation weather** — fetches METAR and TAF data from AviationWeather.gov.
+- **Flight calculations** — density altitude, pressure altitude, wind correction angle, true heading, ground speed, great-circle distance and bearing, and unit conversions.
+- **Docker image and CI** — GitHub Actions runs the test suite and Docker build checks on every push and pull request.
+
+**Planned:** fuel burn and waypoint planning, a web frontend, a step-by-step practice/learning mode, and automated deployment (see [Goals & Progress Plan](#goals--progress-plan)).
+
+### Key Project Feature: Density Altitude Calculation
+
+One of the calculations the system replaces from the E6-B and paper performance charts is **density altitude** the pressure altitude corrected for temperature. It's the single input that nearly every other performance chart in the aircraft's POH depends on: rate of climb, true airspeed, takeoff/landing distance, and range are all plotted against density altitude.
+
+**Inputs:**
+- Pressure Altitude (PA) — altitude read off the altimeter when set to 29.92" Hg
+- Outside Air Temperature (OAT), in °C
+
+**Output:** Density Altitude (ft) — used downstream by the system to look up expected climb rate, true airspeed, takeoff/landing distance, and fuel range for the planned flight.
+
+**Why this feature matters:** Nearly every aircraft performance figure (climb rate, takeoff roll, landing distance, range) is only accurate once corrected for density altitude. Getting this calculation right is important for the rest of the performance-planning features build on.
+
+## Screenshots
+
+UI mockups for the planned frontend (Figma source: [`UIMockUp/UIMockUp1/FlightPlannerCAPSTONE.fig`](UIMockUp/UIMockUp1/FlightPlannerCAPSTONE.fig)):
+
+| Home page | Weather data | Calculations |
+|---|---|---|
+| ![Home page mockup](UIMockUp/UIMockUp1/home_page.png) | ![Weather data results mockup](UIMockUp/UIMockUp1/return_weather_data_landing_page.png) | ![Calculation results mockup](UIMockUp/UIMockUp1/display_calculations_landing_page.png) |
+
+## Installation
+
+Docker is the main way to run this project. Running locally with Python is also supported for development.
+
+### Prerequisites
+
+- [Docker](https://www.docker.com/) (recommended)
+- Python 3.13 (only needed to run locally or to run the tests)
+
+### Steps
+
+1. Clone the repository:
+
+   ```bash
+   git clone https://github.com/OU-CS-4273-Capstone-Grounds/fa26-flightplanner.git
+   cd fa26-flightplanner
+   ```
+
+2. From the repository root, build the Docker image:
+
+   ```bash
+   docker build -t flight-planner .
+   ```
+
+3. *(Optional, for running locally)* From the repository root, create and activate a virtual environment, then install the dependencies:
+
+   ```bash
+   python3 -m venv .venv
+   source .venv/bin/activate
+   python -m pip install -r requirements.txt
+   ```
+
+## Usage
+
+### Start the API
+
+#### Run with Docker
+
+After building the image, run it with port 8000 published:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install -r requirements.txt
-python -m src.main
+docker run --rm -p 8000:8000 flight-planner
 ```
 
-The CLI will prompt you for the four-letter ICAO identifiers of the departure and destination airports.
+The API runs at `http://127.0.0.1:8000`. Open `/docs` for interactive API documentation
+or `/openapi.json` for the schema.
 
-### Run with Docker
+- `GET /health` returns `{"status":"ok"}` without calling external services.
+- `POST /api/v1/calculations/density-altitude` calls the existing calculation function.
 
-From the repository root, build the image and run it with an interactive terminal:
+Example request:
 
 ```bash
-docker build -t flight-planner .
-docker run --rm -it flight-planner python -m src.main
+curl -X POST http://127.0.0.1:8000/api/v1/calculations/density-altitude \
+  -H "Content-Type: application/json" \
+  -d '{"temperature_c": 25, "field_elevation_ft": 1200, "altimeter_inhg": 29.92}'
 ```
 
-## Start the API
+Example response:
 
-Install `requirements.txt` using the virtual environment instructions above, then run:
+```json
+{"density_altitude_ft":2688.0}
+```
+
+#### Run locally
+
+Install `requirements.txt` using the [installation instructions](#installation) above, then run:
 
 ```bash
 python -m uvicorn src.api:app --reload
 ```
 
-The API runs at `http://127.0.0.1:8000`. Open `/docs` for interactive API documentation
-or `/openapi.json` for the schema. The CLI remains available through `python -m src.main`.
+The API is served at the same address, `http://127.0.0.1:8000`.
 
-- `GET /health` returns `{"status":"ok"}` without calling external services.
-- `POST /api/v1/calculations/density-altitude` calls the existing calculation function.
+### Start the CLI
 
-To run the API in Docker:
+#### Run with Docker
+
+From the repository root, run the image with an interactive terminal:
 
 ```bash
-docker build -t flight-planner .
-docker run --rm -p 8000:8000 flight-planner
+docker run --rm -it flight-planner python -m src.main
 ```
 
-Run all tests with `python -m pytest tests -v`. API tests use FastAPI's TestClient
-and do not need a running server or weather service. Add future endpoints in
-`src/api.py`, keeping calculation logic in `src/calculations.py`.
+The CLI will prompt you for the four-letter ICAO identifiers of the departure and destination airports.
 
-## Identified Technologies & Tools
+#### Run locally
+
+With the virtual environment active, start the CLI:
+
+```bash
+python -m src.main
+```
+
+### Running Tests
+
+Run all tests with:
+
+```bash
+python -m pytest tests -v
+```
+
+API tests use FastAPI's TestClient and do not need a running server or weather service.
+
+## Technologies & Tools
 
 | Technology | Purpose |
 |---|---|
@@ -90,6 +193,7 @@ and do not need a running server or weather service. Add future endpoints in
 | **Jira** | Project planning and task organization to track team progress |
 
 ### Learning Resources
+
 - Python: [learnpython.org](https://www.learnpython.org/)
 - GitHub Actions: [docs.github.com/en/actions](https://docs.github.com/en/actions)
 - Docker: [Docker 101 Tutorial](https://www.docker.com/101-tutorial/)
@@ -148,18 +252,6 @@ flowchart TD
 - **Backend:** Listen on `0.0.0.0` and the port configured by Render. Allow the frontend origin, `https://ou-cs-4273-capstone-grounds.github.io`, through CORS.
 - **Frontend:** Configure the Render API's HTTPS URL and the GitHub Pages project base path, `/fa26-flightplanner/`. Keep credentials in backend environment variables or GitHub Actions secrets.
 
-## Key Project Feature: Density Altitude Calculation
-
-One of the calculations the system replaces from the E6-B and paper performance charts is **density altitude** the pressure altitude corrected for temperature. It's the single input that nearly every other performance chart in the aircraft's POH depends on: rate of climb, true airspeed, takeoff/landing distance, and range are all plotted against density altitude.
-
-**Inputs:**
-- Pressure Altitude (PA) — altitude read off the altimeter when set to 29.92" Hg
-- Outside Air Temperature (OAT), in °C
-
-**Output:** Density Altitude (ft) — used downstream by the system to look up expected climb rate, true airspeed, takeoff/landing distance, and fuel range for the planned flight.
-
-**Why this feature matters:** Nearly every aircraft performance figure (climb rate, takeoff roll, landing distance, range) is only accurate once corrected for density altitude. Getting this calculation right is important for the rest of the performance-planning features build on.
-
 ## Goals & Progress Plan
 
 **Overall goal:** Deliver a working flight-planning tool by the end of the semester that a pilot or student could realistically use to plan a cross-country flight, with wind, fuel, distance, and waypoint calculations pulling from live aviation weather data.
@@ -174,7 +266,30 @@ One of the calculations the system replaces from the E6-B and paper performance 
 6. **Practice/learning mode** — add a mode that walks a user through the planning process step-by-step rather than just showing final results.
 7. **Review & polish** — incorporate feedback from our mentor, refine documentation and test coverage.
 
+## Contributing
+
+Work is tracked in Jira, and each branch is named after its ticket (for example, `CAPD-34`).
+
+1. Create a feature branch from the latest `main`: `git checkout -b CAPD-XX`.
+2. Make your changes. Add future endpoints in `src/api.py`, keeping calculation logic in `src/calculations.py`.
+3. Run the tests locally with `python -m pytest tests -v`.
+4. Push your branch: `git push origin CAPD-XX`.
+5. Open a pull request into `main`. GitHub Actions must pass before the pull request can be reviewed and merged (see [Deployment Steps](#deployment-steps)).
+
+## Team Members
+
+- Reese Zimmermann — Product Owner
+- Avinash Kandadi — Sprint Master 1
+- Sahith Gondi — Sprint Master 2
+- Sean Ropp — Sprint Master 3
+- Elise Alvarado — Sprint Master 4
+- Nic Grounds — Mentor / Client
+
+## License
+
+No license has been chosen for this project yet.
+
 ## Repository
 
-**GitHub Repository:**  
+**GitHub Repository:**
 https://github.com/OU-CS-4273-Capstone-Grounds/fa26-flightplanner
