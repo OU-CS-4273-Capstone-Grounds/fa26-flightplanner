@@ -1,0 +1,271 @@
+:root {
+  --color-sky-top: #9ed1df;
+  --color-sky-middle: #a9d7e2;
+  --color-sky-bottom: #82a0e4;
+  --color-ink: #203d70;
+  --color-panel: #d9d9d9;
+  --color-cloud: #f5f5f5;
+  --color-sun: #ffda5b;
+  --color-frame: #e7e7e7;
+  --color-airplane: #050505;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-width: 320px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Full-screen sky and title */
+.flight-planner-home {
+  position: relative;
+  width: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+  border: 7px solid var(--color-frame);
+  color: var(--color-ink);
+  background: linear-gradient(
+    180deg,
+    var(--color-sky-top) 0%,
+    var(--color-sky-middle) 34%,
+    var(--color-sky-bottom) 100%
+  );
+}
+
+.page-title {
+  position: absolute;
+  top: 3.1%;
+  left: 0;
+  width: 100%;
+  margin: 0;
+  color: #243e70;
+  text-align: center;
+  font: 400 clamp(29px, 3.2vw, 48px) / 1.2 Arial, Helvetica, sans-serif;
+}
+
+/* Sun and reusable three-puff cloud */
+.decorative-sun {
+  position: absolute;
+  top: 5.3%;
+  right: 6%;
+  width: clamp(72px, 6.1vw, 103px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: var(--color-sun);
+}
+
+.decorative-cloud {
+  position: absolute;
+  top: 10.2%;
+  left: 8.2%;
+  width: 100px;
+  height: 100px;
+}
+
+.decorative-cloud::before,
+.decorative-cloud::after,
+.cloud-middle-puff {
+  position: absolute;
+  display: block;
+  border-radius: 50%;
+  background: var(--color-cloud);
+}
+
+.decorative-cloud::before,
+.decorative-cloud::after {
+  content: "";
+}
+
+.cloud-middle-puff {
+  top: -14px;
+  left: -22px;
+  width: 100px;
+  height: 100px;
+}
+
+.decorative-cloud::before {
+  top: 25px;
+  left: -52px;
+  width: 94px;
+  height: 96px;
+}
+
+.decorative-cloud::after {
+  top: 25px;
+  left: 14px;
+  width: 96px;
+  height: 99px;
+}
+
+/* Page navigation buttons */
+.page-actions {
+  position: absolute;
+  top: 32.5%;
+  left: 50%;
+  display: flex;
+  width: min(720px, 68%);
+  align-items: center;
+  justify-content: space-between;
+  transform: translateX(-50%);
+  container-type: inline-size;
+}
+
+.page-actions a {
+  display: flex;
+  width: 35%;
+  height: clamp(82px, 10.3vw, 128px);
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 30px;
+  color: #233f72;
+  background: var(--color-panel);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(12px, 1.7vw, 26px);
+  font-weight: 400;
+  line-height: 1.15;
+  text-decoration: none;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+@supports (font-size: 1cqi) {
+  .page-actions a {
+    font-size: clamp(12px, 3.2cqi, 25px);
+  }
+}
+
+.page-actions a:hover {
+  background: #e4e4e4;
+}
+
+/* Airplane illustration */
+.plane-illustration {
+  position: absolute;
+  top: 56.1%;
+  left: 50%;
+  width: clamp(210px, 19vw, 300px);
+  height: auto;
+  transform: translateX(-50%);
+}
+
+.plane-illustration g:first-child {
+  stroke: var(--color-airplane);
+}
+
+.plane-illustration g:last-child {
+  fill: var(--color-airplane);
+}
+
+/* Origin, cruise altitude, and destination fields */
+#flight-form {
+  display: contents;
+}
+
+.form-grid {
+  position: absolute;
+  bottom: 4.4%;
+  left: 7%;
+  display: grid;
+  width: 86%;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: stretch;
+  gap: 2.1%;
+  margin: 0;
+}
+
+.field {
+  display: block;
+  min-width: 0;
+  container-type: inline-size;
+}
+
+.input-wrap {
+  display: flex;
+  height: clamp(54px, 7.4vw, 92px);
+  padding: 0 clamp(8px, 1.25cqi, 20px);
+  border: 0;
+  border-radius: 0;
+  background: var(--color-panel);
+}
+
+.input-wrap:focus-within {
+  outline: 3px solid #284a87;
+  outline-offset: 1px;
+}
+
+.input-wrap input {
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  color: var(--color-ink);
+  background: transparent;
+  font: 400 clamp(10px, 1.5vw, 24px) / 1.2 Arial, Helvetica, sans-serif;
+  text-transform: uppercase;
+}
+
+@supports (font-size: 1cqi) {
+  .input-wrap input {
+    font-size: clamp(10px, 5.5cqi, 29px);
+  }
+}
+
+.input-wrap input::placeholder {
+  color: var(--color-ink);
+  opacity: 1;
+  font-weight: 400;
+  text-transform: uppercase;
+}
+
+/* Stack fields and tighten the layout on phones */
+@media (max-width: 650px) {
+  .decorative-cloud {
+    left: 3%;
+    transform: scale(0.65);
+    transform-origin: left top;
+  }
+
+  .page-actions {
+    top: 31%;
+    width: 88%;
+    gap: 4%;
+  }
+
+  .page-actions a {
+    width: 48%;
+    height: 82px;
+    padding: 8px;
+    border-radius: 22px;
+    text-align: center;
+  }
+
+  .plane-illustration {
+    top: 49%;
+  }
+
+  .form-grid {
+    bottom: 3%;
+    left: 7%;
+    width: 86%;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .input-wrap {
+    height: 45px;
+    padding: 0 12px;
+  }
+}
