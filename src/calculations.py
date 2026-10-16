@@ -131,6 +131,32 @@ def route_bearings_deg(points):
         bearings.append(bearing_deg(points[i], points[i + 1]))
     return bearings
 
+#-----------------------------------------------
+
+# Time of Flight Functions
+
+# time = distance / speed
+# distance is in nautical miles and ground speed is in knots so the result is in hours
+def time_of_flight_hours(distance_nm, ground_speed_kt):
+    if ground_speed_kt <= 0:
+        raise ValueError("Ground speed must be greater than 0")
+    if distance_nm < 0:
+        raise ValueError("Distance cannot be negative")
+    return distance_nm / ground_speed_kt
+
+# nav logs use minutes per leg
+def time_of_flight_minutes(distance_nm, ground_speed_kt):
+    return time_of_flight_hours(distance_nm, ground_speed_kt) * 60
+
+# total time for a route, one distance and one ground speed per leg
+# ground speed is per leg since wind/course changes between waypoints
+def route_time_of_flight_hours(leg_distances_nm, leg_ground_speeds_kt):
+    if len(leg_distances_nm) != len(leg_ground_speeds_kt):
+        raise ValueError("Need one ground speed for each leg")
+    total = 0
+    for i in range(len(leg_distances_nm)):
+        total += time_of_flight_hours(leg_distances_nm[i], leg_ground_speeds_kt[i])
+    return total
 
 #-----------------------------------------------
 
