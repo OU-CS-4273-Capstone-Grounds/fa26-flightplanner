@@ -1,4 +1,7 @@
 import math
+from datetime import date
+
+from pygeomag import GeoMag
 
 # Temperature Conversion Functions 
 
@@ -327,3 +330,77 @@ def ground_speed(true_course, true_airspeed, wind_direction, wind_speed):
         raise ValueError("Headwind is at least as strong as the airspeed, no progress along course")
     return speed
     
+
+""" Magnetic Variation and Compass Deviation Functions
+    TC --(WCA)--> TH --(variation)--> MH --(deviation)--> CH
+    - variation: degrees, East positive / West negative (World Magnetic Model convention)
+      "East is least, West is best": MH = TH - variation
+    - deviation_card: {magnetic_heading: correction} read off the aircraft's compass card,
+      correction = "steer" - "for", so CH = MH + correction
+"""
+
+# Real compass cards rarely exceed a few degrees, anything larger is likely bad data
+MAX_DEVIATION_DEG = 15
+
+# Validate magnetic variation (shared by every public variation function)
+def _validate_variation(variation):
+    if not -180 < variation <= 180:
+        raise ValueError(f"Magnetic variation must be in (-180, 180] degrees (got {variation})")
+
+# Validate a deviation card before interpolating it
+def _validate_deviation_card(deviation_card):
+    if not deviation_card:
+        raise ValueError("Deviation card cannot be empty")
+    for heading, correction in deviation_card.items():
+        if not 0 <= heading < 360:
+            raise ValueError(f"Deviation card heading must be in [0, 360) (got {heading})")
+        if abs(correction) > MAX_DEVIATION_DEG:
+            raise ValueError(
+                f"Deviation correction ({correction} deg at {heading}) exceeds "
+                f"{MAX_DEVIATION_DEG} deg, check the compass card"
+            )
+
+# World Magnetic Model, coefficients ship with pygeomag (loaded once, no network calls)
+_GEO_MAG = GeoMag()
+FEET_TO_KM = 0.0003048
+
+# Magnetic Variation Calculation (World Magnetic Model):
+# Variation at a (lat, lon) point on a given date, East positive / West negative
+# Raises ValueError for dates outside the bundled model's 5-year lifespan
+def magnetic_variation(point, on_date=None, altitude_ft=0):
+    lat, lon = point
+    on_date = on_date or date.today()
+    decimal_year = on_date.year + (on_date.timetuple().tm_yday - 1) / 365.25
+    return _GEO_MAG.calculate(glat=lat, glon=lon, alt=altitude_ft * FEET_TO_KM, time=decimal_year).d
+
+# Magnetic Course Calculation (course line converted to magnetic north):
+def magnetic_course(true_course, variation):
+    _validate_variation(variation)
+    return (true_course - variation) % 360
+
+# Magnetic Heading Calculation (wind corrected heading converted to magnetic north):
+def magnetic_heading(true_course, true_airspeed, wind_direction, wind_speed, variation):
+    heading = true_heading(true_course, true_airspeed, wind_direction, wind_speed)
+    return magnetic_course(heading, variation)
+
+# Compass Deviation Calculation:
+# Linearly interpolates the card between its two nearest headings, wrapping past 360
+def compass_deviation(magnetic_heading_deg, deviation_card):
+    _validate_deviation_card(deviation_card)
+    points = sorted(deviation_card.items())
+    # Repeat the first entry one full turn later so headings past the last entry wrap to it
+    # (this also makes a single entry card apply the same correction on every heading)
+    points.append((points[0][0] + 360, points[0][1]))
+
+    heading = magnetic_heading_deg % 360
+    if heading < points[0][0]:
+        heading += 360
+
+    for (h1, d1), (h2, d2) in zip(points, points[1:]):
+        if h1 <= heading <= h2:
+            return d1 + (d2 - d1) * (heading - h1) / (h2 - h1)
+
+# Compass Heading Calculation (heading to steer by the aircraft's magnetic compass):
+def compass_heading(true_course, true_airspeed, wind_direction, wind_speed, variation, deviation_card):
+    heading = magnetic_heading(true_course, true_airspeed, wind_direction, wind_speed, variation)
+    return (heading + compass_deviation(heading, deviation_card)) % 360
