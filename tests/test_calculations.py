@@ -1,6 +1,7 @@
 import unittest
 import math
 import random
+from datetime import date
 
 from src.calculations import (
     EARTH_RADIUS_NM, fahrenheit_to_celsius, celsius_to_fahrenheit,
@@ -11,6 +12,7 @@ from src.calculations import (
     wind_correction_angle, true_heading, ground_speed,
     calculate_pressure_altitude,calculate_density_altitude, calculate_rate_of_climb,
     calculate_takeoff_distance, calculate_landing_distance, calculate_true_air_speed,
+    MAX_DEVIATION_DEG, magnetic_variation, magnetic_course, magnetic_heading, compass_deviation, compass_heading,
     time_of_flight_hours, time_of_flight_minutes, route_time_of_flight_hours,
 )
 ## coordinates for testing distance and bearing calculations (lat,lon)
@@ -636,6 +638,167 @@ class TestWindTriangleInvalidInput(unittest.TestCase):
     def test_headwind_just_below_airspeed_is_valid(self):
         self.assertAlmostEqual(ground_speed(0, 100, 0, 99), 1, places=9)
 
+## Magnetic Variation (World Magnetic Model)
+# Fixed date so expected values don't drift as the magnetic field changes
+WMM_TEST_DATE = date(2026, 1, 1)
+NORMAN = (35.2456, -97.4721)
+
+class TestMagneticVariation(unittest.TestCase):
+
+    # Known declinations (NOAA WMM2025): East coast is West variation, West coast is East
+    def test_known_airports_within_half_degree(self):
+        for name, point, expected in [("JFK", JFK, -12.6), ("LAX", LAX, 11.4),
+                                      ("ORD", ORD, -4.0), ("Norman", NORMAN, 3.0)]:
+            with self.subTest(airport=name):
+                self.assertAlmostEqual(magnetic_variation(point, WMM_TEST_DATE), expected, delta=0.5)
+
+    # Defaults to today's date when none is given
+    def test_defaults_to_today(self):
+        self.assertAlmostEqual(magnetic_variation(NORMAN),
+                               magnetic_variation(NORMAN, date.today()), places=9)
+
+    # Cruise altitude barely changes variation
+    def test_altitude_has_small_effect(self):
+        self.assertAlmostEqual(magnetic_variation(JFK, WMM_TEST_DATE, 10000),
+                               magnetic_variation(JFK, WMM_TEST_DATE), delta=0.1)
+
+    # Plugs straight into magnetic_course: Norman ~3E turns 090 true into ~087 magnetic
+    def test_feeds_magnetic_course(self):
+        variation = magnetic_variation(NORMAN, WMM_TEST_DATE)
+        self.assertAlmostEqual(magnetic_course(90, variation), 90 - variation, places=9)
+
+    # Dates outside the model's 5-year lifespan raise
+    def test_date_outside_model_lifespan_raises(self):
+        with self.assertRaises(ValueError):
+            magnetic_variation(NORMAN, date(2031, 1, 1))
+
+
+## Magnetic Course and Heading
+class TestMagneticCourseAndHeading(unittest.TestCase):
+
+    # Zero variation: magnetic equals true
+    def test_zero_variation_magnetic_equals_true(self):
+        self.assertAlmostEqual(magnetic_course(213, 0), 213, places=9)
+        self.assertAlmostEqual(magnetic_heading(90, 120, 30, 20, 0),
+                               true_heading(90, 120, 30, 20), places=9)
+
+    # East is least: 10E turns 090 true into 080 magnetic
+    def test_east_variation_subtracts(self):
+        self.assertAlmostEqual(magnetic_course(90, 10), 80, places=9)
+
+    # West is best: 10W turns 090 true into 100 magnetic
+    def test_west_variation_adds(self):
+        self.assertAlmostEqual(magnetic_course(90, -10), 100, places=9)
+
+    # Results wrap into [0, 360) in both directions
+    def test_variation_wraps_past_north(self):
+        self.assertAlmostEqual(magnetic_course(5, 10), 355, places=9)
+        self.assertAlmostEqual(magnetic_course(355, -10), 5, places=9)
+
+    # Magnetic heading is the wind corrected true heading minus variation
+    def test_magnetic_heading_applies_wca_then_variation(self):
+        # Quartering headwind example: TH 081.7011, 5E variation -> MH 076.7011
+        self.assertAlmostEqual(magnetic_heading(90, 120, 30, 20, 5), 76.7011, places=3)
+
+    # Calm wind: magnetic heading equals magnetic course
+    def test_calm_wind_heading_equals_magnetic_course(self):
+        for course in [0, 90, 213, 359]:
+            with self.subTest(course=course):
+                self.assertAlmostEqual(magnetic_heading(course, 110, 270, 0, -7),
+                                       magnetic_course(course, -7), places=9)
+
+    # Variation boundary: 180 is allowed, values past it are not
+    def test_variation_out_of_range_raises(self):
+        self.assertAlmostEqual(magnetic_course(0, 180), 180, places=9)
+        for variation in [-180, 181, -200]:
+            with self.subTest(variation=variation):
+                with self.assertRaisesRegex(ValueError, "Magnetic variation"):
+                    magnetic_course(0, variation)
+                with self.assertRaisesRegex(ValueError, "Magnetic variation"):
+                    magnetic_heading(0, 100, 0, 0, variation)
+
+    # Wind validation still runs through magnetic_heading
+    def test_invalid_wind_inputs_still_raise(self):
+        with self.assertRaisesRegex(ValueError, "airspeed must be greater than 0"):
+            magnetic_heading(90, 0, 0, 10, 5)
+
+
+## Compass Deviation
+# Sample card every 30 degrees: {"for" magnetic heading: correction}
+SAMPLE_CARD = {0: -1, 30: 1, 60: 2, 90: 2, 120: 0, 150: -2,
+               180: -2, 210: -1, 240: 0, 270: 1, 300: 1, 330: 0}
+
+class TestCompassDeviation(unittest.TestCase):
+
+    # On a card heading: exact entry is returned
+    def test_card_heading_returns_entry(self):
+        for heading, correction in SAMPLE_CARD.items():
+            with self.subTest(heading=heading):
+                self.assertAlmostEqual(compass_deviation(heading, SAMPLE_CARD), correction, places=9)
+
+    # Halfway between two entries: average of their corrections
+    def test_interpolates_between_entries(self):
+        self.assertAlmostEqual(compass_deviation(15, SAMPLE_CARD), 0, places=9)
+        self.assertAlmostEqual(compass_deviation(135, SAMPLE_CARD), -1, places=9)
+        self.assertAlmostEqual(compass_deviation(40, SAMPLE_CARD), 1 + 1 / 3, places=9)
+
+    # Between the last entry (330) and north (000): interpolation wraps through 360
+    def test_interpolates_across_north(self):
+        self.assertAlmostEqual(compass_deviation(345, SAMPLE_CARD), -0.5, places=9)
+        self.assertAlmostEqual(compass_deviation(360, SAMPLE_CARD), -1, places=9)
+
+    # Card that doesn't start at 000: headings before the first entry wrap from the last
+    def test_card_not_starting_at_north(self):
+        card = {90: 2, 270: -2}
+        self.assertAlmostEqual(compass_deviation(0, card), 0, places=9)
+        self.assertAlmostEqual(compass_deviation(180, card), 0, places=9)
+        self.assertAlmostEqual(compass_deviation(45, card), 1, places=9)
+
+    # Single entry card: same correction on every heading
+    def test_single_entry_card(self):
+        for heading in [0, 90, 359]:
+            with self.subTest(heading=heading):
+                self.assertAlmostEqual(compass_deviation(heading, {0: 2}), 2, places=9)
+
+    # Invalid cards raise
+    def test_empty_card_raises(self):
+        with self.assertRaisesRegex(ValueError, "Deviation card cannot be empty"):
+            compass_deviation(90, {})
+
+    def test_card_heading_out_of_range_raises(self):
+        for heading in [-30, 360]:
+            with self.subTest(heading=heading):
+                with self.assertRaisesRegex(ValueError, "Deviation card heading"):
+                    compass_deviation(90, {0: 0, heading: 1})
+
+    def test_correction_too_large_raises(self):
+        compass_deviation(90, {0: MAX_DEVIATION_DEG})  # boundary is allowed
+        with self.assertRaisesRegex(ValueError, "check the compass card"):
+            compass_deviation(90, {0: 0, 90: MAX_DEVIATION_DEG + 1})
+
+
+## Compass Heading
+class TestCompassHeading(unittest.TestCase):
+
+    # No variation and an all-zero card: compass heading equals true heading
+    def test_zero_corrections_equal_true_heading(self):
+        card = {heading: 0 for heading in range(0, 360, 30)}
+        self.assertAlmostEqual(compass_heading(90, 120, 30, 20, 0, card),
+                               true_heading(90, 120, 30, 20), places=9)
+
+    # Full chain, calm wind: TC 100 -> MH 090 (10E) -> CH 092 (card +2 at 090)
+    def test_full_chain_calm_wind(self):
+        self.assertAlmostEqual(compass_heading(100, 110, 0, 0, 10, SAMPLE_CARD), 92, places=9)
+
+    # Deviation is looked up at the magnetic heading, not the true heading
+    def test_deviation_uses_magnetic_heading(self):
+        # TH 120, 30W -> MH 150 (card -2) -> CH 148; using TH 120 (card 0) would give 150
+        self.assertAlmostEqual(compass_heading(120, 110, 0, 0, -30, SAMPLE_CARD), 148, places=9)
+
+    # Compass heading wraps past north
+    def test_compass_heading_wraps(self):
+        # TC 005, 5E -> MH 000, card -1 -> CH 359
+        self.assertAlmostEqual(compass_heading(5, 110, 0, 0, 5, SAMPLE_CARD), 359, places=9)
 #--------------- Time of Flight ------------------------------
 
 class TestTimeOfFlight(unittest.TestCase):
