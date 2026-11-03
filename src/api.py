@@ -24,6 +24,7 @@ from .calculations import (
     time_of_flight_hours,
     true_heading,
     wind_correction_angle,
+    total_air_time,
 )
 from .weather import WeatherAPIError, get_metar, get_taf
 
@@ -168,6 +169,9 @@ class CompassHeadingRequest(WindTriangleRequest):
     deviation_card: list[DeviationCardEntry] = Field(
         min_length=1, description="Entries read off the aircraft's compass card"
     )
+class TotalAirTimeRequest(StrictModel):
+    power_setting: int = Field(ge=50, le=75, description="Power setting as a percentage (50-75)")
+    usable_fuel_gallons: float = Field(gt=0, description="Usable fuel in gallons (non negative)")
 
 
 # Responses -------------------------------------------------------------------
@@ -229,6 +233,9 @@ class CompassHeadingResponse(BaseModel):
     magnetic_heading_deg: float
     deviation_deg: float
     compass_heading_deg: float
+
+class TotalAirTimeResponse(BaseModel):
+    total_air_time_minutes: float
 
 
 class AirportResponse(BaseModel):
@@ -454,6 +461,18 @@ def compass(request: CompassHeadingRequest) -> CompassHeadingResponse:
         compass_heading_deg=(mag_heading + deviation) % 360,
     )
 
+@app.post(
+    f"{CALCULATIONS}/total-air-time",
+    response_model=TotalAirTimeResponse,
+    tags=["performance"],
+)
+def total_air_time_endpoint(request: TotalAirTimeRequest) -> TotalAirTimeResponse:
+    """Calculate total air time based on power setting and usable fuel."""
+    return TotalAirTimeResponse(
+        total_air_time_min=_calculate(
+            total_air_time, request.power_setting, request.usable_fuel_gallons
+        )
+    )
 
 
 # Airport and weather endpoints -------------------------------------------------
