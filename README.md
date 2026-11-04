@@ -48,7 +48,7 @@ The software is intended to support the pilot's decision-making process rather t
 **Available now:**
 
 - **Command-line interface** — prompts for departure and destination ICAO airport identifiers and validates them.
-- **HTTP API** (FastAPI) — health check and density-altitude endpoints, with interactive docs at `/docs`.
+- **HTTP API** (FastAPI) — health check, flight calculation, airport, and weather endpoints, with interactive docs at `/docs`.
 - **Live aviation weather** — fetches METAR and TAF data from AviationWeather.gov.
 - **Flight calculations** — density altitude, pressure altitude, wind correction angle, true heading, ground speed, great-circle distance and bearing, and unit conversions.
 - **Docker image and CI** — GitHub Actions runs the test suite and Docker build checks on every push and pull request.
@@ -123,7 +123,33 @@ The API runs at `http://127.0.0.1:8000`. Open `/docs` for interactive API docume
 or `/openapi.json` for the schema.
 
 - `GET /health` returns `{"status":"ok"}` without calling external services.
-- `POST /api/v1/calculations/density-altitude` calls the existing calculation function.
+- `POST /api/v1/calculations/...` endpoints wrap the functions in `src/calculations.py`:
+
+| Endpoint | Returns |
+|---|---|
+| `pressure-altitude` | Pressure altitude from field elevation and altimeter setting |
+| `density-altitude` | Density altitude from temperature, field elevation, and altimeter setting |
+| `rate-of-climb` | Rate of climb at a density altitude |
+| `true-airspeed` | True airspeed at a density altitude and power setting (50-75%) |
+| `takeoff-distance` | Takeoff ground run and distance over a 50 ft obstacle |
+| `landing-distance` | Landing ground roll and distance over a 50 ft obstacle |
+| `route` | Great-circle distance and true course per leg, plus total distance |
+| `time-of-flight` | Minutes per leg and total time en route |
+| `wind-triangle` | Wind correction angle, true heading, and ground speed |
+| `magnetic-variation` | Magnetic variation from the World Magnetic Model |
+| `compass-heading` | True, magnetic, and compass headings using a deviation card |
+
+Inputs the calculations cannot use (for example, a crosswind stronger than the airspeed) return `422` with the reason in `detail`.
+
+Airport and weather endpoints take a four-character ICAO code (for example, `KOUN`):
+
+| Endpoint | Returns |
+|---|---|
+| `GET /api/v1/airports/{icao}` | Airport latitude and longitude |
+| `GET /api/v1/weather/metar/{icao}` | Current weather observation from AviationWeather.gov |
+| `GET /api/v1/weather/taf/{icao}` | Terminal forecast from AviationWeather.gov |
+
+An unknown airport or a missing report returns `404`, and an AviationWeather.gov failure returns `502`.
 
 Example request:
 
@@ -207,7 +233,7 @@ API tests use FastAPI's TestClient and do not need a running server or weather s
 
 The frontend will be hosted on **GitHub Pages**, and the Python backend will run as a **Render Web Service**. **GitHub Container Registry (GHCR)** will store the backend Docker images. GitHub Actions will connect these services by testing changes, building and publishing images, and triggering deployment.
 
-**Current status:** The repository has a Python CLI and a basic FastAPI API with health and density-altitude endpoints. Docker starts the HTTP server on port 8000, and CI runs tests and container startup checks. Additional API endpoints, frontend integration, image publishing, and hosting deployments still need to be implemented. Configure the hosting port and frontend CORS origin when adding deployment support.
+**Current status:** The repository has a Python CLI and a FastAPI API with health, flight calculation, airport, and weather endpoints. Docker starts the HTTP server on port 8000, and CI runs tests and container startup checks. Additional API endpoints, frontend integration, image publishing, and hosting deployments still need to be implemented. Configure the hosting port and frontend CORS origin when adding deployment support.
 
 ### Deployment Steps
 
