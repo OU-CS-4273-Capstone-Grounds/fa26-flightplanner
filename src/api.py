@@ -24,6 +24,8 @@ from .calculations import (
     time_of_flight_hours,
     true_heading,
     wind_correction_angle,
+    
+    EngineRPMCalculation,
 )
 from .weather import WeatherAPIError, get_metar, get_taf
 
@@ -229,6 +231,11 @@ class CompassHeadingResponse(BaseModel):
     magnetic_heading_deg: float
     deviation_deg: float
     compass_heading_deg: float
+
+
+
+class EngineRPMResponse(BaseModel):
+    rpm: float
 
 
 class AirportResponse(BaseModel):
