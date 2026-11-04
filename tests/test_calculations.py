@@ -13,7 +13,7 @@ from src.calculations import (
     calculate_pressure_altitude,calculate_density_altitude, calculate_rate_of_climb,
     calculate_takeoff_distance, calculate_landing_distance, calculate_true_air_speed,
     MAX_DEVIATION_DEG, magnetic_variation, magnetic_course, magnetic_heading, compass_deviation, compass_heading,
-    time_of_flight_hours, time_of_flight_minutes, route_time_of_flight_hours, total_air_time,
+    time_of_flight_hours, time_of_flight_minutes, route_time_of_flight_hours, total_air_time, EngineRPMCalculation
 )
 from src.calculations import time_to_climb_minutes, distance_to_climb_nm, top_of_descent_nm
 ## coordinates for testing distance and bearing calculations (lat,lon)
@@ -1010,6 +1010,25 @@ class TestCalculations(unittest.TestCase):
         # Test that total_air_time raises an exception for non-positive usable fuel
         with self.assertRaises(Exception):
             total_air_time(65, -1)
+    
+    def test_calculate_engine_rpm(self):
+        power_setting = 60
+        density_altitude = 5000
+        expected_rpm = 2190 + (5000 / 40)
+        self.assertAlmostEqual(
+            EngineRPMCalculation(power_setting, density_altitude),
+            expected_rpm,
+            places=2,
+        )
+
+    def test_calculate_engine_rpm_rejects_power_setting_below_bounds(self):
+        with self.assertRaises(Exception):
+            EngineRPMCalculation(49, 5000)
+            
+    def test_calculate_engine_rpm_rejects_power_setting_above_bounds(self):
+        with self.assertRaises(Exception):
+            EngineRPMCalculation(76, 5000)
+            
 
 if __name__ == "__main__":
     unittest.main()

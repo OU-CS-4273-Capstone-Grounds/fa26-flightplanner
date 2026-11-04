@@ -28,6 +28,7 @@ from .calculations import (
     true_heading,
     wind_correction_angle,
     total_air_time,
+    EngineRPMCalculation,
 )
 from .weather import WeatherAPIError, get_metar, get_taf
 
@@ -189,6 +190,9 @@ class TotalAirTimeRequest(StrictModel):
     power_setting: int = Field(ge=50, le=75, description="Power setting as a percentage (50-75)")
     usable_fuel_gallons: float = Field(gt=0, description="Usable fuel in gallons (non negative)")
 
+class EngineRPMRequest(StrictModel):
+    power_setting: int = Field(ge=50, le=75, description="Power setting as a percentage (50-75)")
+    density_altitude: float = Field(ge=0, description="Density altitude in feet")
 
 # Responses -------------------------------------------------------------------
 
@@ -261,6 +265,9 @@ class CompassHeadingResponse(BaseModel):
 
 class TotalAirTimeResponse(BaseModel):
     total_air_time_minutes: float
+
+class EngineRPMResponse(BaseModel):
+    rpm: float
 
 
 class AirportResponse(BaseModel):
@@ -531,6 +538,16 @@ def total_air_time_endpoint(request: TotalAirTimeRequest) -> TotalAirTimeRespons
         )
     )
 
+@app.post(
+    f"{CALCULATIONS}/engine-rpm",
+    response_model=EngineRPMResponse,
+    tags=["performance"],
+)
+
+def engine_rpm(request: EngineRPMRequest) -> EngineRPMResponse:
+    """Calculate engine RPM based on power setting and density altitude."""
+    rpm = _calculate(EngineRPMCalculation, request.power_setting, request.density_altitude)
+    return EngineRPMResponse(rpm=rpm)
 
 # Airport and weather endpoints -------------------------------------------------
 
