@@ -13,7 +13,7 @@ from src.calculations import (
     calculate_pressure_altitude,calculate_density_altitude, calculate_rate_of_climb,
     calculate_takeoff_distance, calculate_landing_distance, calculate_true_air_speed,
     MAX_DEVIATION_DEG, magnetic_variation, magnetic_course, magnetic_heading, compass_deviation, compass_heading,
-    time_of_flight_hours, time_of_flight_minutes, route_time_of_flight_hours,
+    time_of_flight_hours, time_of_flight_minutes, route_time_of_flight_hours, total_air_time, EngineRPMCalculation
 )
 ## coordinates for testing distance and bearing calculations (lat,lon)
 JFK = (40.6413, -73.7781)
@@ -942,11 +942,51 @@ class TestCalculations(unittest.TestCase):
             expected,
             places=2,
         )
+        
     def test_calculate_true_air_speed_power_setting_out_of_range(self):
         density_altitude = 0
         power_setting = 45
         with self.assertRaises(Exception):
             calculate_true_air_speed(density_altitude, power_setting)
+
+    def test_total_air_time_rejects_power_setting_below_bounds(self):
+        # Test that total_air_time raises an exception for power settings below the valid range (50-75)
+        with self.assertRaises(Exception):
+            total_air_time(49, 36)
+
+    def test_total_air_time_rejects_power_setting_above_bounds(self):
+        # Test that total_air_time raises an exception for power settings above the valid range (50-75)
+        with self.assertRaises(Exception):
+            total_air_time(76, 36)
+
+    def test_total_air_time_returns_minutes(self):
+        # 36 usable gallons at 7.3 GPH (65% power), converted to minutes.
+        expected_total_air_time = 295.89 # 60 * (36 / 7.3)
+        self.assertAlmostEqual(total_air_time(65, 36), expected_total_air_time, places=2)
+
+    def test_total_air_time_rejects_non_positive_usable_fuel(self):
+        # Test that total_air_time raises an exception for non-positive usable fuel
+        with self.assertRaises(Exception):
+            total_air_time(65, -1)
+    
+    def test_calculate_engine_rpm(self):
+        power_setting = 60
+        density_altitude = 5000
+        expected_rpm = 2190 + (5000 / 40)
+        self.assertAlmostEqual(
+            EngineRPMCalculation(power_setting, density_altitude),
+            expected_rpm,
+            places=2,
+        )
+
+    def test_calculate_engine_rpm_rejects_power_setting_below_bounds(self):
+        with self.assertRaises(Exception):
+            EngineRPMCalculation(49, 5000)
             
+    def test_calculate_engine_rpm_rejects_power_setting_above_bounds(self):
+        with self.assertRaises(Exception):
+            EngineRPMCalculation(76, 5000)
+            
+
 if __name__ == "__main__":
     unittest.main()

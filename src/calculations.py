@@ -404,3 +404,69 @@ def compass_deviation(magnetic_heading_deg, deviation_card):
 def compass_heading(true_course, true_airspeed, wind_direction, wind_speed, variation, deviation_card):
     heading = magnetic_heading(true_course, true_airspeed, wind_direction, wind_speed, variation)
     return (heading + compass_deviation(heading, deviation_card)) % 360
+
+def total_air_time(power_setting, usable_fuel_gallons):
+    """Calculate total air time in minutes based on power setting and usable fuel.
+    
+    Parameters:
+        power_setting (int): Power setting as a percentage (50-75).
+        usable_fuel_gallons (float): Usable fuel in gallons (non negative).
+
+    Returns:
+        float: Total air time in minutes.
+    """
+
+    if power_setting < 50 or power_setting > 75:
+        raise Exception("Power setting out of range (50-75)")
+
+    if usable_fuel_gallons <= 0:
+        raise Exception("Usable fuel must be greater than zero")
+    
+    gph_by_setting = {
+    50: 5.6,
+    55: 6.2,
+    60: 6.7,
+    65: 7.3,
+    70: 7.9,
+    75: 8.4,
+    }
+
+    gph = gph_by_setting[power_setting]
+    return 60 * (usable_fuel_gallons / gph)
+
+def EngineRPMCalculation(power_setting, density_altitude):
+    """
+    Calculate engine RPM based on power setting and density altitude.
+    
+    Parameters:
+        power_setting (int): Power setting as a percentage (50-75).
+        density_altitude (float): Density altitude in feet.
+
+    Returns:
+        float: Engine RPM.
+    """
+
+    if power_setting < 50 or power_setting > 75:
+            raise Exception("Power setting out of range (50-75)")
+
+    slope_by_setting = {
+    50: 60,
+    55: 50,
+    60: 40,
+    65: 40,
+    70: 40,
+    75: 33.33,
+    }
+
+    x_intercept_by_setting = {
+    50: 2070,
+    55: 2130,
+    60: 2190,
+    65: 2250,
+    70: 2310,
+    75: 2380,
+    }
+
+    slope = slope_by_setting[power_setting]
+    x_intercept = x_intercept_by_setting[power_setting]
+    return x_intercept + (density_altitude/slope)
