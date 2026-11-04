@@ -24,6 +24,8 @@ from .calculations import (
     time_of_flight_hours,
     true_heading,
     wind_correction_angle,
+    
+    EngineRPMCalculation,
 )
 from .weather import WeatherAPIError, get_metar, get_taf
 
@@ -169,6 +171,9 @@ class CompassHeadingRequest(WindTriangleRequest):
         min_length=1, description="Entries read off the aircraft's compass card"
     )
 
+class EngineRPMRequest(StrictModel):
+    power_setting: int = Field(ge=50, le=75, description="Power setting as a percentage (50-75)")
+    density_altitude: float = Field(ge=0, description="Density altitude in feet")
 
 # Responses -------------------------------------------------------------------
 
@@ -229,6 +234,11 @@ class CompassHeadingResponse(BaseModel):
     magnetic_heading_deg: float
     deviation_deg: float
     compass_heading_deg: float
+
+
+
+class EngineRPMResponse(BaseModel):
+    rpm: float
 
 
 class AirportResponse(BaseModel):
@@ -454,7 +464,15 @@ def compass(request: CompassHeadingRequest) -> CompassHeadingResponse:
         compass_heading_deg=(mag_heading + deviation) % 360,
     )
 
-
+@app.post(
+    f"{CALCULATIONS}/engine-rpm",
+    response_model=EngineRPMResponse,
+    tags=["performance"],
+)
+def engine_rpm(request: EngineRPMRequest) -> EngineRPMResponse:
+    """Calculate engine RPM based on power setting and density altitude."""
+    rpm = _calculate(EngineRPMCalculation, request.power_setting, request.density_altitude)
+    return EngineRPMResponse(engine_rpm=rpm)
 
 # Airport and weather endpoints -------------------------------------------------
 
