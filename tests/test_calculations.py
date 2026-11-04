@@ -14,6 +14,7 @@ from src.calculations import (
     calculate_takeoff_distance, calculate_landing_distance, calculate_true_air_speed,
     MAX_DEVIATION_DEG, magnetic_variation, magnetic_course, magnetic_heading, compass_deviation, compass_heading,
     time_of_flight_hours, time_of_flight_minutes, route_time_of_flight_hours,
+    EngineRPMCalculation,
 )
 ## coordinates for testing distance and bearing calculations (lat,lon)
 JFK = (40.6413, -73.7781)
@@ -947,6 +948,24 @@ class TestCalculations(unittest.TestCase):
         power_setting = 45
         with self.assertRaises(Exception):
             calculate_true_air_speed(density_altitude, power_setting)
+    
+    def test_calculate_engine_rpm(self):
+        power_setting = 60
+        density_altitude = 5000
+        expected_rpm = 2190 + (5000 / 40)
+        self.assertAlmostEqual(
+            EngineRPMCalculation(power_setting, density_altitude),
+            expected_rpm,
+            places=2,
+        )
+
+    def test_calculate_engine_rpm_rejects_power_setting_below_bounds(self):
+        with self.assertRaises(Exception):
+            EngineRPMCalculation(49, 5000)
+            
+    def test_calculate_engine_rpm_rejects_power_setting_above_bounds(self):
+        with self.assertRaises(Exception):
+            EngineRPMCalculation(76, 5000)
             
 if __name__ == "__main__":
     unittest.main()
