@@ -18,10 +18,13 @@ from .calculations import (
     calculate_true_air_speed,
     compass_deviation,
     distance_nm,
+    distance_to_climb_nm,
     ground_speed,
     magnetic_course,
     magnetic_variation,
     time_of_flight_hours,
+    time_to_climb_minutes,
+    top_of_descent_nm,
     true_heading,
     wind_correction_angle,
     total_air_time,
@@ -132,6 +135,19 @@ class TimeOfFlightRequest(StrictModel):
     legs: list[TimeOfFlightLeg] = Field(min_length=1)
 
 
+class ClimbRequest(StrictModel):
+    start_density_altitude_ft: float = Field(description="Density altitude at the start of the climb in feet")
+    cruise_density_altitude_ft: float = Field(description="Density altitude at cruise in feet")
+    ground_speed_kt: float = Field(gt=0, description="Ground speed during the climb in knots")
+
+
+class TopOfDescentRequest(StrictModel):
+    cruise_altitude_ft: float = Field(description="Cruise altitude in feet")
+    destination_altitude_ft: float = Field(description="Destination altitude in feet")
+    ground_speed_kt: float = Field(gt=0, description="Ground speed during the descent in knots")
+    descent_rate_fpm: float = Field(default=500, gt=0, description="Descent rate in feet per minute")
+
+
 class WindTriangleRequest(StrictModel):
     true_course_deg: float = Field(ge=0, lt=360, description="True course in degrees")
     true_airspeed_kt: float = Field(gt=0, description="True airspeed in knots")
@@ -216,6 +232,15 @@ class TimeOfFlightResponse(BaseModel):
     leg_minutes: list[float]
     total_hours: float
     total_minutes: float
+
+
+class ClimbResponse(BaseModel):
+    time_to_climb_min: float
+    distance_to_climb_nm: float
+
+
+class TopOfDescentResponse(BaseModel):
+    top_of_descent_nm: float
 
 
 class WindTriangleResponse(BaseModel):
@@ -400,6 +425,38 @@ def time_of_flight(request: TimeOfFlightRequest) -> TimeOfFlightResponse:
         leg_minutes=[hours * 60 for hours in leg_hours],
         total_hours=total_hours,
         total_minutes=total_hours * 60,
+    )
+
+
+@app.post(f"{CALCULATIONS}/climb", response_model=ClimbResponse, tags=["performance"])
+def climb(request: ClimbRequest) -> ClimbResponse:
+    """Time and distance to the top of climb."""
+    time_min = _calculate(
+        time_to_climb_minutes,
+        request.start_density_altitude_ft,
+        request.cruise_density_altitude_ft,
+    )
+    return ClimbResponse(
+        time_to_climb_min=time_min,
+        distance_to_climb_nm=_calculate(distance_to_climb_nm, time_min, request.ground_speed_kt),
+    )
+
+
+@app.post(
+    f"{CALCULATIONS}/top-of-descent",
+    response_model=TopOfDescentResponse,
+    tags=["performance"],
+)
+def top_of_descent(request: TopOfDescentRequest) -> TopOfDescentResponse:
+    """Distance before the destination to start the descent."""
+    return TopOfDescentResponse(
+        top_of_descent_nm=_calculate(
+            top_of_descent_nm,
+            request.cruise_altitude_ft,
+            request.destination_altitude_ft,
+            request.ground_speed_kt,
+            request.descent_rate_fpm,
+        )
     )
 
 
