@@ -163,6 +163,40 @@ def route_time_of_flight_hours(leg_distances_nm, leg_ground_speeds_kt):
 
 #-----------------------------------------------
 
+# Climb and Descent Functions
+
+# time to climb = altitude to gain / rate of climb
+# rate of climb drops as you get higher so use the average of the bottom and the top
+# altitudes are density altitudes in feet and the result is in minutes
+def time_to_climb_minutes(start_altitude_ft, cruise_altitude_ft):
+    if cruise_altitude_ft <= start_altitude_ft:
+        raise ValueError("Cruise altitude must be higher than the starting altitude")
+    start_rate = calculate_rate_of_climb(start_altitude_ft)
+    cruise_rate = calculate_rate_of_climb(cruise_altitude_ft)
+    average_rate = (start_rate + cruise_rate) / 2
+    return (cruise_altitude_ft - start_altitude_ft) / average_rate
+
+# distance covered during the climb
+# ground speed is in knots and time is in minutes so divide by 60 to get nautical miles
+def distance_to_climb_nm(time_to_climb_min, ground_speed_kt):
+    if ground_speed_kt <= 0:
+        raise ValueError("Ground speed must be greater than 0")
+    return ground_speed_kt * time_to_climb_min / 60
+
+# how many nautical miles before the destination to start the descent
+# 500 feet per minute is the normal descent rate
+def top_of_descent_nm(cruise_altitude_ft, destination_altitude_ft, ground_speed_kt, descent_rate_fpm=500):
+    if cruise_altitude_ft <= destination_altitude_ft:
+        raise ValueError("Cruise altitude must be higher than the destination altitude")
+    if ground_speed_kt <= 0:
+        raise ValueError("Ground speed must be greater than 0")
+    if descent_rate_fpm <= 0:
+        raise ValueError("Descent rate must be greater than 0")
+    time_to_descend_min = (cruise_altitude_ft - destination_altitude_ft) / descent_rate_fpm
+    return ground_speed_kt * time_to_descend_min / 60
+
+#-----------------------------------------------
+
 def calculate_pressure_altitude(altimeter_setting, field_elevation_in_ft):
     """
     Calculate the pressure altitude.

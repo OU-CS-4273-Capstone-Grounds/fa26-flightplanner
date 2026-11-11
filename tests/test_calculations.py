@@ -15,6 +15,7 @@ from src.calculations import (
     MAX_DEVIATION_DEG, magnetic_variation, magnetic_course, magnetic_heading, compass_deviation, compass_heading,
     time_of_flight_hours, time_of_flight_minutes, route_time_of_flight_hours, total_air_time,
 )
+from src.calculations import time_to_climb_minutes, distance_to_climb_nm, top_of_descent_nm
 ## coordinates for testing distance and bearing calculations (lat,lon)
 JFK = (40.6413, -73.7781)
 LAX = (33.9416, -118.4085)
@@ -866,6 +867,47 @@ class TestRouteTimeOfFlight(unittest.TestCase):
         leg_distances = [distance_nm(route[0], route[1]), distance_nm(route[1], route[2])]
         expected = route_distance_nm(route) / 120
         self.assertAlmostEqual(route_time_of_flight_hours(leg_distances, [120, 120]), expected, places=9)
+
+#--------------- Climb and Descent ------------------------------
+
+class TestClimbAndDescent(unittest.TestCase):
+    def test_time_to_climb_example(self):
+        # 1200 ft climbs at 612 fpm and 6500 ft climbs at 400 fpm, average is 506 fpm
+        # 5300 ft to gain / 506 fpm = 10.47 min
+        self.assertAlmostEqual(time_to_climb_minutes(1200, 6500), 10.47, places=2)
+
+    def test_higher_cruise_takes_longer(self):
+        self.assertGreater(time_to_climb_minutes(1200, 8500), time_to_climb_minutes(1200, 6500))
+
+    def test_cruise_below_start_raises(self):
+        with self.assertRaises(ValueError):
+            time_to_climb_minutes(6500, 1200)
+        with self.assertRaises(ValueError):
+            time_to_climb_minutes(3000, 3000)
+
+    def test_distance_to_climb_example(self):
+        # 12 min at 75 kt = 0.2 hr * 75 = 15 nm
+        self.assertAlmostEqual(distance_to_climb_nm(12, 75), 15, places=9)
+
+    def test_distance_to_climb_invalid_ground_speed_raises(self):
+        with self.assertRaises(ValueError):
+            distance_to_climb_nm(12, 0)
+
+    def test_top_of_descent_example(self):
+        # 5300 ft to lose at 500 fpm = 10.6 min, at 100 kt that is 17.67 nm
+        self.assertAlmostEqual(top_of_descent_nm(6500, 1200, 100), 17.67, places=2)
+
+    def test_top_of_descent_custom_rate(self):
+        # 6000 ft to lose at 1000 fpm = 6 min, at 120 kt that is 12 nm
+        self.assertAlmostEqual(top_of_descent_nm(7000, 1000, 120, 1000), 12, places=9)
+
+    def test_top_of_descent_invalid_input_raises(self):
+        with self.assertRaises(ValueError):
+            top_of_descent_nm(1200, 6500, 100)
+        with self.assertRaises(ValueError):
+            top_of_descent_nm(6500, 1200, 0)
+        with self.assertRaises(ValueError):
+            top_of_descent_nm(6500, 1200, 100, 0)
 
 
 class TestCalculations(unittest.TestCase):

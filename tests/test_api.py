@@ -252,6 +252,29 @@ def test_compass_heading_rejects_large_deviation(client):
     assert response.status_code == 422
 
 
+def test_climb(client):
+    body = {"start_density_altitude_ft": 1200, "cruise_density_altitude_ft": 6500, "ground_speed_kt": 75}
+    response = post(client, "climb", body)
+    assert response.status_code == 200
+    # 5300 ft at an average of 506 fpm = 10.47 min, at 75 kt that is 13.09 nm
+    assert response.json()["time_to_climb_min"] == pytest.approx(10.47, abs=0.01)
+    assert response.json()["distance_to_climb_nm"] == pytest.approx(13.09, abs=0.01)
+
+
+def test_climb_rejects_cruise_below_start(client):
+    body = {"start_density_altitude_ft": 6500, "cruise_density_altitude_ft": 1200, "ground_speed_kt": 75}
+    response = post(client, "climb", body)
+    assert response.status_code == 422
+
+
+def test_top_of_descent(client):
+    body = {"cruise_altitude_ft": 6500, "destination_altitude_ft": 1200, "ground_speed_kt": 100}
+    response = post(client, "top-of-descent", body)
+    assert response.status_code == 200
+    # 5300 ft at 500 fpm = 10.6 min, at 100 kt that is 17.67 nm
+    assert response.json()["top_of_descent_nm"] == pytest.approx(17.67, abs=0.01)
+
+
 @pytest.mark.parametrize(
     "path",
     ["pressure-altitude", "rate-of-climb", "true-airspeed", "takeoff-distance", "landing-distance",
