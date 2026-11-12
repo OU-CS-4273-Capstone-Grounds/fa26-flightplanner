@@ -492,7 +492,7 @@ def total_air_time_endpoint(request: TotalAirTimeRequest) -> TotalAirTimeRespons
 def engine_rpm(request: EngineRPMRequest) -> EngineRPMResponse:
     """Calculate engine RPM based on power setting and density altitude."""
     rpm = _calculate(EngineRPMCalculation, request.power_setting, request.density_altitude)
-    return EngineRPMResponse(engine_rpm=rpm)
+    return EngineRPMResponse(rpm=rpm)
 
 # Airport and weather endpoints -------------------------------------------------
 
