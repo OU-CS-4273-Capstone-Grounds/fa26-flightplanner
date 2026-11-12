@@ -184,6 +184,17 @@ def test_time_of_flight(client):
     assert body["total_hours"] == pytest.approx(1.5)
     assert body["total_minutes"] == pytest.approx(90)
 
+def test_total_air_time(client):
+    response = post(client, "total-air-time", {
+        "power_setting": 65,
+        "usable_fuel_gallons": 36,
+    })
+
+    assert response.status_code == 200
+    assert response.json()["total_air_time_minutes"] == pytest.approx(
+        calculations.total_air_time(65, 36)
+    )
+
 
 @pytest.mark.parametrize(
     "legs",

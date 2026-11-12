@@ -526,7 +526,7 @@ def compass(request: CompassHeadingRequest) -> CompassHeadingResponse:
 def total_air_time_endpoint(request: TotalAirTimeRequest) -> TotalAirTimeResponse:
     """Calculate total air time based on power setting and usable fuel."""
     return TotalAirTimeResponse(
-        total_air_time_min=_calculate(
+        total_air_time_minutes=_calculate(
             total_air_time, request.power_setting, request.usable_fuel_gallons
         )
     )
