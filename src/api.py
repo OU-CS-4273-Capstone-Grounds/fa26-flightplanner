@@ -4,6 +4,7 @@ from datetime import date as Date
 
 from fastapi import FastAPI, HTTPException, Path
 from fastapi.exceptions import RequestValidationError
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -33,6 +34,14 @@ from .weather import WeatherAPIError, get_metar, get_taf
 
 
 app = FastAPI(title="Flight Planner API", version="0.1.0")
+
+# The GitHub Pages frontend calls this API from the browser on another origin.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["https://ou-cs-4273-capstone-grounds.github.io"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
+)
 
 CALCULATIONS = "/api/v1/calculations"
 AIRPORTS = "/api/v1/airports"
