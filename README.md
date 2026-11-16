@@ -138,6 +138,7 @@ or `/openapi.json` for the schema.
 | `wind-triangle` | Wind correction angle, true heading, and ground speed |
 | `magnetic-variation` | Magnetic variation from the World Magnetic Model |
 | `compass-heading` | True, magnetic, and compass headings using a deviation card |
+| `engine-rpm` | Estimated engine RPM at a power setting and density altitude |
 
 Inputs the calculations cannot use (for example, a crosswind stronger than the airspeed) return `422` with the reason in `detail`.
 
