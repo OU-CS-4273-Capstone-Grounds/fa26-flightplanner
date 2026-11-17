@@ -1,0 +1,74 @@
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; min-height: 100%; width: 100%; }
+body { font-family: Arial, Helvetica, sans-serif; }
+.weather-page {
+  min-height: 100vh;
+  padding: 4.6vh 2.4vw 10.7vh;
+  color: #2a3b64;
+  background: linear-gradient(180deg, #a6cce4 0%, #aacbde 42%, #7d96e2 100%);
+  position: relative;
+}
+.weather-panel {
+  width: min(1062px, 100%);
+  min-height: 84.6vh;
+  margin: 0 auto;
+  padding: 8.2vh 7.5% 5vh;
+  background: rgba(246, 250, 255, .83);
+}
+.weather-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(32px, 11vw, 155px);
+  justify-items: center;
+}
+.weather-column { width: 100%; max-width: 360px; }
+.airport-heading {
+  min-height: 64px;
+  margin-bottom: 8px;
+  font-size: clamp(19px, 1.85vw, 26px);
+  line-height: 1.2;
+  text-align: center;
+}
+.conditions-card {
+  min-height: 452px;
+  padding: 19px clamp(20px, 2.8vw, 39px) 30px;
+  border-radius: 27px;
+  background: #d6d6d6;
+  color: #4b659b;
+  font-size: clamp(17px, 1.85vw, 25px);
+  line-height: 1.2;
+}
+.conditions-card h2 {
+  margin: 0 0 31px;
+  color: #2a3b64;
+  font-size: 1em;
+  text-align: center;
+  white-space: nowrap;
+}
+.condition-group { margin-bottom: 30px; }
+.condition-group:last-child { margin-bottom: 0; }
+.condition-group p { margin: 0; white-space: nowrap; }
+.back-button {
+  position: absolute;
+  left: 2.4vw;
+  bottom: 2.2vh;
+  display: flex;
+  width: 170px;
+  height: 72px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 27px;
+  background: #d9d9d9;
+  color: #2a3b64;
+  font-size: 25px;
+  text-decoration: none;
+}
+.back-button:hover, .back-button:focus-visible { background: #e6e6e6; }
+@media (max-width: 760px) {
+  .weather-page { padding: 20px 16px 105px; }
+  .weather-panel { padding: 28px 18px; min-height: 0; }
+  .weather-grid { grid-template-columns: 1fr; gap: 30px; }
+  .airport-heading { min-height: 0; }
+  .conditions-card { min-height: 0; font-size: clamp(17px, 4vw, 24px); }
+  .back-button { left: 16px; bottom: 18px; width: 140px; height: 60px; }
+}
