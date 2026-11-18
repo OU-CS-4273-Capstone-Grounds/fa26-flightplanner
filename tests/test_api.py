@@ -194,6 +194,16 @@ def test_engine_rpm(client):
     assert response.json()["rpm"] == pytest.approx(
         calculations.EngineRPMCalculation(65, 6000)
     )
+def test_total_air_time(client):
+    response = post(client, "total-air-time", {
+        "power_setting": 65,
+        "usable_fuel_gallons": 36,
+    })
+
+    assert response.status_code == 200
+    assert response.json()["total_air_time_minutes"] == pytest.approx(
+        calculations.total_air_time(65, 36)
+    )
 
 @pytest.mark.parametrize(
     "legs",
